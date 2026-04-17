@@ -2,10 +2,58 @@ pipeline {
     agent any
 
     stages {
-        stage('Test') {
+        stage('Checkout') {
             steps {
-                echo 'Jenkins 연결 성공'
+                git 'https://github.com/popis1412/CI-CD-Test.git'
             }
+        }
+
+        stage('Install') {
+            steps {
+                sh 'pip install -r requirements.txt'
+            }
+        }
+
+        stage('CA Tests (합기)') {
+            steps {
+                sh 'pytest tests/test_ca.py'
+            }
+        }
+
+        stage('WPN Tests (무기/태그)') {
+            steps {
+                sh 'pytest tests/test_wpn.py'
+            }
+        }
+
+        stage('SKL Tests (모험스킬)') {
+            steps {
+                sh 'pytest tests/test_skl.py'
+            }
+        }
+
+        stage('GIM Tests (기믹)') {
+            steps {
+                sh 'pytest tests/test_gim.py'
+            }
+        }
+
+        stage('WLD Tests (환경)') {
+            steps {
+                sh 'pytest tests/test_wld.py'
+            }
+        }
+    }
+
+    post {
+        always {
+            echo '전체 테스트 완료'
+        }
+        success {
+            echo '모든 테스트 성공'
+        }
+        failure {
+            echo '테스트 실패 발생'
         }
     }
 }
