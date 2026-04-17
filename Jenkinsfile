@@ -21,17 +21,18 @@ pipeline {
       steps {
         // chcp 65001: 젠킨스 로그 한글 깨짐 방지용 UTF-8 설정
         // npx: 로컬에 설치된 newman을 강제로 찾아 실행
+        // 실제 파일이 존재하는 C:\QA\CI-CD-Test 절대 경로 적용
         
         // 1. [전투] 합기(CA) 테스트 실행
         bat '''
         chcp 65001
-        npx newman run Combat_CA_Test.postman_collection.json -e 7DS_Origin_ENV.postman_environment.json -r cli,htmlextra --reporter-htmlextra-export newman\\Combat_CA_Report.html --export-environment 7DS_Origin_ENV.postman_environment.json
+        npx newman run "C:\\QA\\CI-CD-Test\\Combat_CA_Test.postman_collection.json" -e "C:\\QA\\CI-CD-Test\\7DS_Origin_ENV.postman_environment.json" -r cli,htmlextra --reporter-htmlextra-export newman\\Combat_CA_Report.html --export-environment 7DS_Origin_ENV.postman_environment.json
         '''
         
         // 2. [모험] 기믹/상호작용 테스트 실행
         bat '''
         chcp 65001
-        npx newman run Adventure_Gimmick_Test.postman_collection.json -e 7DS_Origin_ENV.postman_environment.json -r cli,htmlextra --reporter-htmlextra-export newman\\Adventure_Gimmick_Report.html
+        npx newman run "C:\\QA\\CI-CD-Test\\Adventure_Gimmick_Test.postman_collection.json" -e "C:\\QA\\CI-CD-Test\\7DS_Origin_ENV.postman_environment.json" -r cli,htmlextra --reporter-htmlextra-export newman\\Adventure_Gimmick_Report.html
         '''
       }
     }
