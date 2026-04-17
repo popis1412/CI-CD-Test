@@ -10,37 +10,37 @@ pipeline {
 
         stage('Install') {
             steps {
-                sh 'pip install -r requirements.txt'
+                bat 'pip install -r requirements.txt'
             }
         }
 
         stage('CA Tests (합기)') {
             steps {
-                sh 'pytest tests/test_ca.py'
+                bat 'pytest tests/test_ca.py'
             }
         }
 
         stage('WPN Tests (무기/태그)') {
             steps {
-                sh 'pytest tests/test_wpn.py'
+                bat 'pytest tests/test_wpn.py'
             }
         }
 
         stage('SKL Tests (모험스킬)') {
             steps {
-                sh 'pytest tests/test_skl.py'
+                bat 'pytest tests/test_skl.py'
             }
         }
 
         stage('GIM Tests (기믹)') {
             steps {
-                sh 'pytest tests/test_gim.py'
+                bat 'pytest tests/test_gim.py'
             }
         }
 
         stage('WLD Tests (환경)') {
             steps {
-                sh 'pytest tests/test_wld.py'
+                bat 'pytest tests/test_wld.py'
             }
         }
     }
