@@ -55,7 +55,7 @@ pipeline {
         
         success {
             slackSend (
-                channel: '#test', 
+                channel: '#새-채널', 
                 color: '#00FF00', 
                 message: """
 ✅ SUCCESS: Job ${env.JOB_NAME} [${env.BUILD_NUMBER}]
@@ -67,7 +67,7 @@ pipeline {
         
         failure {
             slackSend (
-                channel: '#test', 
+                channel: '#새-채널', 
                 color: '#FF0000', 
                 message: "❌ FAIL: Job ${env.JOB_NAME} [${env.BUILD_NUMBER}] 테스트 실패! 로그를 확인하세요. (${env.BUILD_URL})"
             )
