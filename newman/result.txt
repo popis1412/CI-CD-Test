@@ -1,0 +1,4 @@
+[7DS Origin QA Test Result] 
+실행 시간: 2026-04-18 13:38:33.62 
+1. Combat_CA_Test: SUCCESS 
+2. Adventure_Gimmick_Test: SUCCESS 
