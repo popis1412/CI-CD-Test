@@ -15,14 +15,12 @@ pipeline {
             steps {
                 script {
 
-                    def RESULT_DIR = "${params.BASE_PATH}\\Test Results"
-
                     bat """
-if exist "Test Results" (
-    rmdir /s /q "Test Results"
-)
-mkdir "Test Results"
-"""
+                    if exist "Test Results" (
+                        rmdir /s /q "Test Results"
+                    )
+                    mkdir "Test Results"
+                    """
                 }
             }
         }
@@ -31,8 +29,18 @@ mkdir "Test Results"
             steps {
                 script {
 
-                    def RESULT_DIR = "${params.BASE_PATH}\\Test Results"
+                    def RESULT_DIR = "Test Results"
                     def TEST_FILE = "${params.BASE_PATH}\\Tests\\QA_Test.csv"
+
+                    // ===============================
+                    // SAFE RATE
+                    // ===============================
+                    def rate = { num, total ->
+                        if (total == 0) return 0
+                        return Math.round((num * 100.0 / total) * 100) / 100
+                    }
+
+                    def safe = { v -> (v ?: "").trim() }
 
                     if (!fileExists(TEST_FILE)) {
                         error "[ERR-FILE-001] 테스트 파일 없음"
@@ -44,7 +52,7 @@ mkdir "Test Results"
                     def testResults = []
 
                     // ===============================
-                    // CSV PARSE
+                    // CSV PARSE (문자열 그대로 사용)
                     // ===============================
                     for (int i = 1; i < lines.size(); i++) {
 
@@ -55,84 +63,110 @@ mkdir "Test Results"
                             testResults << [
                                 row: i + 1,
                                 col: "D",
-                                major: cols[0]?.trim(),
-                                minor: cols[1]?.trim(),
-                                scenario: cols[2]?.trim(),
-                                result: cols[3]?.trim()?.toUpperCase()
+                                major: safe(cols[0]),
+                                minor: safe(cols[1]),
+                                scenario: safe(cols[2]),
+                                result: safe(cols[3])   // ❗ 변경: toUpperCase 제거
                             ]
                         }
+                    }
+
+                    // ===============================
+                    // 정렬 우선순위 (요구 문자열 기준)
+                    // ===============================
+                    def order = [
+                        "Fail": 0,
+                        "Pass": 1,
+                        "Blocked": 2,
+                        "Not Test": 3,
+                        "N/A": 4
+                    ]
+
+                    testResults = testResults.sort { a, b ->
+                        a.major <=> b.major ?:
+                        a.minor <=> b.minor ?:
+                        a.scenario <=> b.scenario ?:
+                        order[a.result] <=> order[b.result]
                     }
 
                     // ===============================
                     // 전체 상태 통계
                     // ===============================
                     def statusStats = [
-                        TOTAL:0, PASS:0, FAIL:0, BLOCKED:0, NOTTEST:0, NA:0
+                        TOTAL:0, Pass:0, Fail:0, Blocked:0, "Not Test":0, "N/A":0
                     ]
 
                     testResults.each { t ->
                         statusStats.TOTAL++
 
                         switch(t.result) {
-                            case "PASS": statusStats.PASS++; break
-                            case "FAIL": statusStats.FAIL++; break
-                            case "BLOCKED": statusStats.BLOCKED++; break
-                            case "NOTTEST": statusStats.NOTTEST++; break
-                            case "N/A": statusStats.NA++; break
+                            case "Pass": statusStats.Pass++; break
+                            case "Fail": statusStats.Fail++; break
+                            case "Blocked": statusStats.Blocked++; break
+                            case "Not Test": statusStats["Not Test"]++; break
+                            case "N/A": statusStats["N/A"]++; break
                         }
                     }
 
-                    def failRate = statusStats.TOTAL > 0 ?
-                            (statusStats.FAIL * 100 / statusStats.TOTAL).toDouble().round(2) : 0
+                    def failRate = rate(statusStats.Fail, statusStats.TOTAL)
 
                     // ===============================
-                    // 대/중분류 매트릭스
+                    // MATRIX
                     // ===============================
                     def matrix = [:]
 
                     testResults.each { t ->
 
-                        if(!matrix[t.major]) matrix[t.major] = [:]
+                        if (!matrix[t.major]) matrix[t.major] = [:]
 
-                        if(!matrix[t.major][t.minor]) {
+                        if (!matrix[t.major][t.minor]) {
                             matrix[t.major][t.minor] = [
-                                total:0, PASS:0, FAIL:0, BLOCKED:0, NOTTEST:0, NA:0
+                                total:0, Pass:0, Fail:0, Blocked:0, "Not Test":0, "N/A":0
                             ]
                         }
 
                         def m = matrix[t.major][t.minor]
                         m.total++
 
-                        if(m.containsKey(t.result)) {
+                        if (m.containsKey(t.result)) {
                             m[t.result]++
                         }
                     }
 
+                    matrix = matrix.sort { it.key }
+
                     // ===============================
-                    // 시나리오 분석
+                    // SCENARIO
                     // ===============================
                     def scenarioMap = [:]
 
                     testResults.each { t ->
 
-                        if(!scenarioMap[t.scenario]) {
-                            scenarioMap[t.scenario] = [total:0, fail:0, list:[]]
+                        if (!scenarioMap[t.scenario]) {
+                            scenarioMap[t.scenario] = [total:0, fail:0]
                         }
 
                         def s = scenarioMap[t.scenario]
 
                         s.total++
-
-                        if(t.result == "FAIL") {
-                            s.fail++
-                            s.list << t
-                        }
+                        if (t.result == "Fail") s.fail++
                     }
 
-                    def fails = testResults.findAll { it.result == "FAIL" }
+                    scenarioMap = scenarioMap.sort { it.key }
 
                     // ===============================
-                    // HTML 시작
+                    // FAIL LIST
+                    // ===============================
+                    def fails = testResults.findAll { it.result == "Fail" }
+
+                    fails = fails.sort { a, b ->
+                        a.major <=> b.major ?:
+                        a.minor <=> b.minor ?:
+                        a.scenario <=> b.scenario
+                    }
+
+                    // ===============================
+                    // HTML
                     // ===============================
                     def html = """
                     <html>
@@ -148,7 +182,6 @@ mkdir "Test Results"
                         th, td { border:1px solid #ddd; padding:8px; text-align:center; }
                         th { background:#eee; }
                         .fail { color:red; font-weight:bold; }
-                        .pass { color:green; }
                         .box { background:#fff3cd; padding:12px; margin-top:10px; }
                     </style>
                     </head>
@@ -161,11 +194,11 @@ mkdir "Test Results"
                     <table>
                         <tr><th>Status</th><th>Count</th><th>Progress</th></tr>
                         <tr><td>Total</td><td>${statusStats.TOTAL}</td><td>100%</td></tr>
-                        <tr><td>Pass</td><td>${statusStats.PASS}</td><td>${(statusStats.PASS*100/statusStats.TOTAL).round(2)}%</td></tr>
-                        <tr><td>Fail</td><td>${statusStats.FAIL}</td><td>${(statusStats.FAIL*100/statusStats.TOTAL).round(2)}%</td></tr>
-                        <tr><td>Blocked</td><td>${statusStats.BLOCKED}</td><td>${(statusStats.BLOCKED*100/statusStats.TOTAL).round(2)}%</td></tr>
-                        <tr><td>NotTest</td><td>${statusStats.NOTTEST}</td><td>${(statusStats.NOTTEST*100/statusStats.TOTAL).round(2)}%</td></tr>
-                        <tr><td>N/A</td><td>${statusStats.NA}</td><td>${(statusStats.NA*100/statusStats.TOTAL).round(2)}%</td></tr>
+                        <tr><td>Pass</td><td>${statusStats.Pass}</td><td>${rate(statusStats.Pass, statusStats.TOTAL)}%</td></tr>
+                        <tr><td>Fail</td><td>${statusStats.Fail}</td><td>${rate(statusStats.Fail, statusStats.TOTAL)}%</td></tr>
+                        <tr><td>Blocked</td><td>${statusStats.Blocked}</td><td>${rate(statusStats.Blocked, statusStats.TOTAL)}%</td></tr>
+                        <tr><td>Not Test</td><td>${statusStats["Not Test"]}</td><td>${rate(statusStats["Not Test"], statusStats.TOTAL)}%</td></tr>
+                        <tr><td>N/A</td><td>${statusStats["N/A"]}</td><td>${rate(statusStats["N/A"], statusStats.TOTAL)}%</td></tr>
                     </table>
 
                     <h2>📊 2. 전체 실패율</h2>
@@ -177,7 +210,7 @@ mkdir "Test Results"
                     """
 
                     // ===============================
-                    // 대분류별 출력
+                    // MATRIX 출력
                     // ===============================
                     matrix.each { major, minors ->
 
@@ -190,7 +223,7 @@ mkdir "Test Results"
                             <th>Pass%</th>
                             <th>Fail%</th>
                             <th>Blocked%</th>
-                            <th>NotTest%</th>
+                            <th>Not Test%</th>
                             <th>N/A%</th>
                         </tr>
                         """
@@ -199,21 +232,15 @@ mkdir "Test Results"
 
                             def total = v.total ?: 1
 
-                            def passP = (v.PASS * 100 / total).round(2)
-                            def failP = (v.FAIL * 100 / total).round(2)
-                            def blockP = (v.BLOCKED * 100 / total).round(2)
-                            def notP = (v.NOTTEST * 100 / total).round(2)
-                            def naP = (v.NA * 100 / total).round(2)
-
                             html += """
                             <tr>
                                 <td>${major}</td>
                                 <td>${minor}</td>
-                                <td>${passP}%</td>
-                                <td class="fail">${failP}%</td>
-                                <td>${blockP}%</td>
-                                <td>${notP}%</td>
-                                <td>${naP}%</td>
+                                <td>${rate(v.Pass, total)}%</td>
+                                <td class="fail">${rate(v.Fail, total)}%</td>
+                                <td>${rate(v.Blocked, total)}%</td>
+                                <td>${rate(v["Not Test"], total)}%</td>
+                                <td>${rate(v["N/A"], total)}%</td>
                             </tr>
                             """
                         }
@@ -222,24 +249,22 @@ mkdir "Test Results"
                     }
 
                     // ===============================
-                    // 시나리오 분석
+                    // SCENARIO
                     // ===============================
                     html += "<h2>📌 4. 시나리오 실패 비율</h2>"
 
                     scenarioMap.each { s, v ->
 
-                        def failRateS = (v.fail * 100 / v.total).round(2)
-
                         html += """
                         <div class="box">
                             <b>${s}</b><br>
-                            Fail Rate: ${failRateS}%
+                            Fail Rate: ${rate(v.fail, v.total)}%
                         </div>
                         """
                     }
 
                     // ===============================
-                    // Fail 상세
+                    // FAIL LIST
                     // ===============================
                     html += "<h2>📌 5. 결함 상세</h2>"
                     html += "<table><tr><th>대분류</th><th>중분류</th><th>시나리오</th><th>결과</th></tr>"
@@ -250,7 +275,7 @@ mkdir "Test Results"
                             <td>${it.major}</td>
                             <td>${it.minor}</td>
                             <td>${it.scenario}</td>
-                            <td class="fail">FAIL</td>
+                            <td class="fail">Fail</td>
                         </tr>
                         """
                     }
@@ -270,10 +295,8 @@ mkdir "Test Results"
     post {
         always {
             script {
-                def RESULT_DIR = "${params.BASE_PATH}\\Test Results"
-
                 publishHTML(target: [
-                    reportDir: RESULT_DIR,
+                    reportDir: "Test Results",
                     reportFiles: 'QA_Report.html',
                     reportName: 'QA Report'
                 ])
