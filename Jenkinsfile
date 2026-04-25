@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'WORKSPACE_PATH', defaultValue: '', description: 'C:파일경로')
+        string(name: 'WORKSPACE_PATH', defaultValue: 'C:\\QA\\CI-CD-Test', description: 'Workspace Path')
     }
 
     environment {
@@ -28,14 +28,14 @@ pipeline {
                 script {
 
                     if (!fileExists(TEST_FILE_PATH)) {
-                        error "CSV 파일 없음"
+                        error "CSV 없음"
                     }
 
                     def content = readFile(TEST_FILE_PATH)
                     def lines = content.split("\\r?\\n")
 
                     // ======================
-                    // CSV SAFE PARSER (Excel 대응)
+                    // CSV SAFE PARSER
                     // ======================
                     def parseCsvLine = { line ->
                         def result = []
@@ -45,18 +45,13 @@ pipeline {
                         for (int i = 0; i < line.length(); i++) {
                             char c = line.charAt(i)
 
-                            if (c == '"') {
-                                inQuotes = !inQuotes
-                            }
+                            if (c == '"') inQuotes = !inQuotes
                             else if (c == ',' && !inQuotes) {
                                 result << sb.toString().trim()
                                 sb.setLength(0)
                             }
-                            else {
-                                sb.append(c)
-                            }
+                            else sb.append(c)
                         }
-
                         result << sb.toString().trim()
                         return result
                     }
@@ -79,6 +74,7 @@ pipeline {
                             major: cols[0],
                             minor: cols[1],
                             scenario: cols[2],
+                            action: cols[3],
                             result: cols[6]
                         ]
                     }
@@ -88,10 +84,7 @@ pipeline {
                     // ======================
                     def normalize = { r ->
                         if (!r) return "NOT TEST"
-
-                        def v = r.trim().toUpperCase()
-
-                        switch(v) {
+                        switch(r.trim().toUpperCase()) {
                             case "PASS": return "PASS"
                             case "FAIL": return "FAIL"
                             case "BLOCKED": return "BLOCKED"
@@ -106,12 +99,72 @@ pipeline {
                     }
 
                     // ======================
-                    // FAIL LIST
+                    // STATS
                     // ======================
-                    def fails = testResults.findAll { it.result == "FAIL" }
+                    def stats = [
+                        Total: 0,
+                        PASS: 0,
+                        FAIL: 0,
+                        BLOCKED: 0,
+                        "NOT TEST": 0,
+                        "N/A": 0
+                    ]
+
+                    testResults.each {
+                        stats.Total++
+                        stats[it.result] = (stats[it.result] ?: 0) + 1
+                    }
 
                     // ======================
-                    // HTML (FAIL 전용 테이블)
+                    // ① 대/중분류 통계
+                    // ======================
+                    def groupMap = [:]
+
+                    testResults.each { t ->
+                        def key = "${t.major}|${t.minor}"
+
+                        if (!groupMap[key]) {
+                            groupMap[key] = [
+                                major: t.major,
+                                minor: t.minor,
+                                total: 0,
+                                pass: 0,
+                                fail: 0
+                            ]
+                        }
+
+                        def g = groupMap[key]
+                        g.total++
+                        if (t.result == "PASS") g.pass++
+                        if (t.result == "FAIL") g.fail++
+                    }
+
+                    // ======================
+                    // ② FAIL 시나리오별 비율
+                    // ======================
+                    def failByScenario = [:]
+
+                    testResults.each {
+                        if (it.result == "FAIL") {
+                            failByScenario[it.scenario] = (failByScenario[it.scenario] ?: 0) + 1
+                        }
+                    }
+
+                    // 전체 대비 비율
+                    def failScenarioTable = failByScenario.collect { k, v ->
+                        [
+                            scenario: k,
+                            rate: stats.FAIL > 0 ? (v * 100.0 / stats.FAIL) : 0
+                        ]
+                    }
+
+                    // ======================
+                    // ③ 결함 상세 (원본 유지)
+                    // ======================
+                    def defects = testResults.findAll { it.result == "FAIL" }
+
+                    // ======================
+                    // HTML REPORT
                     // ======================
                     def html = """
                     <html>
@@ -119,7 +172,7 @@ pipeline {
                         <meta charset="UTF-8">
                         <style>
                             body { font-family: Arial; padding:20px; }
-                            table { border-collapse: collapse; width:100%; }
+                            table { border-collapse: collapse; width:100%; margin-bottom:30px; }
                             th, td { border:1px solid #ddd; padding:8px; text-align:center; }
                             th { background:#333; color:white; }
                             .fail { background:#ffdddd; }
@@ -127,35 +180,78 @@ pipeline {
                     </head>
                     <body>
 
-                    <h2>${PROJECT_NAME} - FAIL REPORT</h2>
+                    <h2>${PROJECT_NAME} QA REPORT</h2>
 
-                    <h3>FAIL 목록 (${fails.size()}건)</h3>
-
+                    <h3>📊 대/중분류 테스트 현황</h3>
                     <table>
                         <tr>
                             <th>Major</th>
                             <th>Minor</th>
-                            <th>Scenario</th>
+                            <th>Total</th>
+                            <th>Pass</th>
+                            <th>Fail</th>
+                            <th>Fail %</th>
                         </tr>
                     """
 
-                    if (fails.size() == 0) {
+                    groupMap.values().each {
+                        def failRate = it.total > 0 ? (it.fail * 100.0 / it.total) : 0
+
                         html += """
                         <tr>
-                            <td colspan="3">All Passed 🎉</td>
+                            <td>${it.major}</td>
+                            <td>${it.minor}</td>
+                            <td>${it.total}</td>
+                            <td>${it.pass}</td>
+                            <td>${it.fail}</td>
+                            <td>${String.format('%.1f', failRate)}%</td>
                         </tr>
                         """
-                    } else {
+                    }
 
-                        fails.each { f ->
-                            html += """
-                            <tr class="fail">
-                                <td>${f.major}</td>
-                                <td>${f.minor}</td>
-                                <td>${f.scenario}</td>
-                            </tr>
-                            """
-                        }
+                    html += """
+                    </table>
+
+                    <h3>📉 분류별 실패 시나리오 비율</h3>
+                    <table>
+                        <tr>
+                            <th>TC 이름</th>
+                            <th>Fail 비율</th>
+                        </tr>
+                    """
+
+                    failScenarioTable.each {
+                        html += """
+                        <tr>
+                            <td>${it.scenario}</td>
+                            <td>${String.format('%.1f', it.rate)}%</td>
+                        </tr>
+                        """
+                    }
+
+                    html += """
+                    </table>
+
+                    <h3>❌ 분류별 발견된 결함</h3>
+                    <table>
+                        <tr>
+                            <th>No</th>
+                            <th>대분류</th>
+                            <th>중분류</th>
+                            <th>테스트 액션</th>
+                        </tr>
+                    """
+
+                    int idx = 1
+                    defects.each {
+                        html += """
+                        <tr class="fail">
+                            <td>${idx++}</td>
+                            <td>${it.major}</td>
+                            <td>${it.minor}</td>
+                            <td>${it.action}</td>
+                        </tr>
+                        """
                     }
 
                     html += """
@@ -165,57 +261,45 @@ pipeline {
                     </html>
                     """
 
-                    writeFile file: "${RESULT_DIR}\\fail_report.html", text: html
+                    writeFile file: "${RESULT_DIR}\\qa_report.html", text: html
 
                     // ======================
-                    // Slack 메시지 생성
+                    // Slack 메시지
                     // ======================
                     def slackMessage = ""
 
-                    if (fails.size() > 0) {
+                    if (defects.size() > 0) {
+                        slackMessage = """❌ QA 완료 (FAIL ${defects.size()}건)
 
-                        slackMessage = """❌ QA 완료 (FAIL 발생)
-FAIL COUNT: ${fails.size()}
-
---- FAIL LIST ---
 """
-
-                        fails.each { f ->
-                            slackMessage += """
-• Major: ${f.major}
-• Minor: ${f.minor}
-• Scenario: ${f.scenario}
--------------------
-"""
+                        failScenarioTable.each {
+                            slackMessage += "• ${it.scenario} (${String.format('%.1f', it.rate)}%)\n"
                         }
-
                     } else {
-                        slackMessage = "✅ QA 완료 - ALL PASS (${testResults.size()} cases)"
+                        slackMessage = "✅ QA 완료 - ALL PASS"
                     }
 
-                    // ======================
-                    // SUCCESS 고정 (빌드 실패 없음)
-                    // ======================
                     currentBuild.result = 'SUCCESS'
-
-                    echo "[INFO] FAIL: ${fails.size()}"
-                    echo "[INFO] TOTAL: ${testResults.size()}"
-
-                    // Slack용 저장
-                    currentBuild.description = "FAIL=${fails.size()}, TOTAL=${testResults.size()}"
-
-                    // Slack message export
+                    currentBuild.description = "TOTAL=${stats.Total}, FAIL=${stats.FAIL}"
                     env.SLACK_MSG = slackMessage
+
+                    echo "[INFO] TOTAL: ${stats.Total}"
+                    echo "[INFO] FAIL: ${stats.FAIL}"
                 }
             }
         }
     }
 
     post {
-
         success {
             slackSend channel: '#새-채널',
-                color: (env.SLACK_MSG.contains("FAIL") ? 'danger' : 'good'),
+                color: 'good',
+                message: env.SLACK_MSG
+        }
+
+        failure {
+            slackSend channel: '#새-채널',
+                color: 'danger',
                 message: env.SLACK_MSG
         }
 
