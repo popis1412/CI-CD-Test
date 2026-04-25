@@ -46,7 +46,7 @@ pipeline {
 
                         def cols = lines[i].split(",")
 
-                        if (cols.length >= 4) {
+                        if (cols.size() >= 4) {
                             testResults << [
                                 major: cols[0]?.trim(),
                                 minor: cols[1]?.trim(),
@@ -57,7 +57,7 @@ pipeline {
                     }
 
                     // ======================
-                    // 상태 정규화 함수
+                    // 상태 정규화
                     // ======================
                     def normalize = { r ->
                         if (r == null) return "Not Test"
@@ -85,22 +85,23 @@ pipeline {
                     testResults.each { t ->
                         def r = normalize(t.result)
                         t.result = r
-                        stats["Total"]++
 
+                        stats["Total"]++
                         stats[r] = (stats[r] ?: 0) + 1
                     }
 
                     def failRate = stats["Total"] > 0 ?
-                            (stats["Fail"] * 100.0 / stats["Total"]).toString().substring(0,5) : "0"
+                            (stats["Fail"] * 100.0 / stats["Total"]) : 0
 
                     // ======================
-                    // 대/중분류 Matrix
+                    // Matrix
                     // ======================
                     def matrix = [:]
 
                     testResults.each { t ->
 
                         if (!matrix[t.major]) matrix[t.major] = [:]
+
                         if (!matrix[t.major][t.minor]) {
                             matrix[t.major][t.minor] = [
                                 Total:0, Pass:0, Fail:0, Blocked:0, "Not Test":0, "N/A":0
@@ -113,12 +114,12 @@ pipeline {
                     }
 
                     // ======================
-                    // Fail 리스트
+                    // Fail list
                     // ======================
                     def fails = testResults.findAll { it.result == "Fail" }
 
                     // ======================
-                    // HTML
+                    // HTML 생성
                     // ======================
                     def html = """
                     <html>
@@ -134,7 +135,6 @@ pipeline {
                         th, td { border:1px solid #ddd; padding:8px; text-align:center; }
                         th { background:#eee; }
                         .fail { color:red; font-weight:bold; }
-                        .pass { color:green; }
                         .box { background:#fff3cd; padding:12px; margin-top:10px; }
                     </style>
                     </head>
@@ -144,36 +144,30 @@ pipeline {
                     <h1>${env.PROJECT_NAME} QA REPORT</h1>
 
                     <h2>📌 1. 전체 테스트 현황</h2>
-
                     <table>
-                        <tr><th>Status</th><th>Count</th><th>Progress</th></tr>
+                        <tr><th>Status</th><th>Count</th><th>Rate</th></tr>
                         <tr><td>Total</td><td>${stats["Total"]}</td><td>100%</td></tr>
-                        <tr><td>Pass</td><td>${stats["Pass"]}</td><td>${stats["Pass"] * 100 / stats["Total"]}%</td></tr>
-                        <tr><td>Fail</td><td>${stats["Fail"]}</td><td>${stats["Fail"] * 100 / stats["Total"]}%</td></tr>
-                        <tr><td>Blocked</td><td>${stats["Blocked"]}</td><td>${stats["Blocked"] * 100 / stats["Total"]}%</td></tr>
-                        <tr><td>Not Test</td><td>${stats["Not Test"]}</td><td>${stats["Not Test"] * 100 / stats["Total"]}%</td></tr>
-                        <tr><td>N/A</td><td>${stats["N/A"]}</td><td>${stats["N/A"] * 100 / stats["Total"]}%</td></tr>
+                        <tr><td>Pass</td><td>${stats["Pass"]}</td><td>${stats["Pass"] * 100.0 / stats["Total"]}</td></tr>
+                        <tr><td>Fail</td><td>${stats["Fail"]}</td><td>${stats["Fail"] * 100.0 / stats["Total"]}</td></tr>
+                        <tr><td>Blocked</td><td>${stats["Blocked"]}</td><td>${stats["Blocked"] * 100.0 / stats["Total"]}</td></tr>
+                        <tr><td>Not Test</td><td>${stats["Not Test"]}</td><td>${stats["Not Test"] * 100.0 / stats["Total"]}</td></tr>
+                        <tr><td>N/A</td><td>${stats["N/A"]}</td><td>${stats["N/A"] * 100.0 / stats["Total"]}</td></tr>
                     </table>
 
                     <h2>📌 2. Fail Rate</h2>
-                    <div class="box">
-                        ${failRate}%
-                    </div>
+                    <div class="box">${failRate}%</div>
 
-                    <h2>📌 3. 대/중분류 테스트 현황</h2>
+                    <h2>📌 3. 대/중분류</h2>
                     """
 
-                    // ======================
-                    // 정렬된 출력
-                    // ======================
                     matrix.keySet().sort().each { major ->
 
                         html += "<h3>${major}</h3>"
                         html += """
                         <table>
                         <tr>
-                            <th>대분류</th>
-                            <th>중분류</th>
+                            <th>Major</th>
+                            <th>Minor</th>
                             <th>Total</th>
                             <th>Pass%</th>
                             <th>Fail%</th>
@@ -193,11 +187,11 @@ pipeline {
                                 <td>${major}</td>
                                 <td>${minor}</td>
                                 <td>${v.Total}</td>
-                                <td>${(v.Pass * 100 / total)}</td>
-                                <td class="fail">${(v.Fail * 100 / total)}</td>
-                                <td>${(v.Blocked * 100 / total)}</td>
-                                <td>${(v["Not Test"] * 100 / total)}</td>
-                                <td>${(v["N/A"] * 100 / total)}</td>
+                                <td>${v.Pass * 100.0 / total}</td>
+                                <td class="fail">${v.Fail * 100.0 / total}</td>
+                                <td>${v.Blocked * 100.0 / total}</td>
+                                <td>${v["Not Test"] * 100.0 / total}</td>
+                                <td>${v["N/A"] * 100.0 / total}</td>
                             </tr>
                             """
                         }
@@ -205,19 +199,16 @@ pipeline {
                         html += "</table>"
                     }
 
-                    // ======================
-                    // Fail 상세
-                    // ======================
-                    html += "<h2>📌 4. 결함 상세</h2>"
-                    html += "<table><tr><th>대분류</th><th>중분류</th><th>시나리오</th><th>결과</th></tr>"
+                    html += "<h2>📌 4. Fail 상세</h2>"
+                    html += "<table><tr><th>Major</th><th>Minor</th><th>Scenario</th><th>Result</th></tr>"
 
-                    fails.each { f ->
+                    fails.each {
                         html += """
                         <tr>
-                            <td>${f.major}</td>
-                            <td>${f.minor}</td>
-                            <td>${f.scenario}</td>
-                            <td class="fail">FAIL</td>
+                            <td>${it.major}</td>
+                            <td>${it.minor}</td>
+                            <td>${it.scenario}</td>
+                            <td class="fail">Fail</td>
                         </tr>
                         """
                     }
@@ -236,15 +227,8 @@ pipeline {
 
     post {
         always {
-            script {
-                def RESULT_DIR = "${env.WORKSPACE}\\Test Results"
-
-                publishHTML(target: [
-                    reportDir: RESULT_DIR,
-                    reportFiles: 'QA_Report.html',
-                    reportName: 'QA Report'
-                ])
-            }
+            // ✅ HTML Publisher 제거 → 안정적인 archiveArtifacts 사용
+            archiveArtifacts artifacts: 'Test Results/**', fingerprint: true
         }
 
         success {
