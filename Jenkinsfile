@@ -2,11 +2,12 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'BASE_PATH', defaultValue: '', description: '기본 경로 (비워두면 기본 경로 사용)')
+        string(name: 'BASE_PATH', defaultValue: 'C:\\QA\\CI-CD-Test', description: '결과 저장 경로')
     }
 
     environment {
-        DEFAULT_PATH = "C:\\QA\\CI-CD-Test"
+        RESULT_DIR = "${params.BASE_PATH}\\Test Results"
+        TEST_FILE = "${params.BASE_PATH}\\Tests\\QA_Test.csv"
     }
 
     stages {
@@ -15,20 +16,13 @@ pipeline {
             steps {
                 script {
                     try {
-                        // 경로 결정 (빈 값이면 기본 경로 사용)
-                        def basePath = params.BASE_PATH?.trim() ? params.BASE_PATH : env.DEFAULT_PATH
-                        env.RESULT_DIR = "${basePath}\\Test Results"
-
                         bat """
                         if not exist "${env.RESULT_DIR}" (
                             mkdir "${env.RESULT_DIR}"
                         )
                         """
-
-                        bat "del /q \"${env.RESULT_DIR}\\*\""
-
                     } catch (Exception e) {
-                        error "[ERR-PATH-001] 경로를 찾을 수 없습니다: ${env.RESULT_DIR}"
+                        error "[ERR-PATH-001] 경로 생성 실패: ${env.RESULT_DIR}"
                     }
                 }
             }
@@ -38,66 +32,121 @@ pipeline {
             steps {
                 script {
 
-                    def failItems = []
-
-                    for (int i=1; i<=100; i++) {
-                        if (i == 15) failItems << "[ERR-TAG-102] 캐릭터 교체 오류 (15행)"
-                        if (i == 42) failItems << "[ERR-SKL-205] 스킬 버프 소실 (42행)"
-                        if (i == 77) failItems << "[ERR-SYS-501] 입력 무시 (77행)"
-                        if (i == 82) failItems << "[ERR-MEM-909] 리소스 오류 (82행)"
+                    if (!fileExists(env.TEST_FILE)) {
+                        error "[ERR-FILE-001] 테스트 파일 없음: ${env.TEST_FILE}"
                     }
 
-                    def htmlPath = "${env.RESULT_DIR}\\7DS_QA_Report.html"
+                    def lines = readFile(env.TEST_FILE).split("\\r?\\n")
 
-                    writeFile file: htmlPath, text: """
+                    def testResults = []
+
+                    // CSV 구조: 대분류,중분류,시나리오,결과
+                    lines.drop(1).each { line ->
+                        def cols = line.split(",")
+
+                        if (cols.size() >= 4) {
+                            testResults << [
+                                major: cols[0],
+                                minor: cols[1],
+                                scenario: cols[2],
+                                result: cols[3]
+                            ]
+                        }
+                    }
+
+                    // 🔥 통계 집계
+                    def stats = [:]
+
+                    testResults.each { t ->
+                        if(!stats[t.major]) stats[t.major] = [:]
+                        if(!stats[t.major][t.minor]) {
+                            stats[t.major][t.minor] = [total:0, pass:0, fail:0]
+                        }
+
+                        def s = stats[t.major][t.minor]
+                        s.total++
+
+                        if(t.result == "PASS") s.pass++
+                        else if(t.result == "FAIL") s.fail++
+                    }
+
+                    // 🔥 HTML 생성
+                    def html = """
                     <html>
+                    <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial; padding:20px; }
+                        table { border-collapse: collapse; width:100%; }
+                        th, td { border:1px solid #ccc; padding:10px; text-align:center; }
+                        th { background:#eee; }
+                        .fail { color:red; }
+                        .pass { color:green; }
+                    </style>
+                    </head>
                     <body>
-                        <h1>QA REPORT</h1>
-                        <p>경로: ${env.RESULT_DIR}</p>
-                        <p>시간: ${new Date()}</p>
-                    </body>
-                    </html>
+
+                    <h1>QA 정량 분석 리포트</h1>
+                    <p>경로: ${env.RESULT_DIR}</p>
+                    <p>파일: ${env.TEST_FILE}</p>
+                    <p>시간: ${new Date()}</p>
+
+                    <h2>📊 분류별 테스트 결과</h2>
+                    <table>
+                        <tr>
+                            <th>대분류</th>
+                            <th>중분류</th>
+                            <th>총 TC</th>
+                            <th>PASS</th>
+                            <th>FAIL</th>
+                            <th>실패율</th>
+                        </tr>
                     """
 
-                    if (failItems.size() > 0) {
+                    stats.each { major, minors ->
+                        minors.each { minor, s ->
+                            def failRate = s.total > 0 ? (s.fail * 100 / s.total).toInteger() : 0
 
-                        def msg = """
-❌ [ERR-QA-002] QA 테스트 실패
-
-📂 결과 경로:
-${env.RESULT_DIR}
-
-🎯 실패 상세:
-${failItems.collect { "- ${it}\n  ▶ 액션: 로직 확인 필요" }.join("\n\n")}
-"""
-
-                        env.SLACK_FAIL_MSG = msg
-                        error "[ERR-QA-002] QA 테스트 실패 발생"
-
-                    } else {
-
-                        env.SLACK_SUCCESS_MSG = """
-✅ QA 테스트 통과
-
-📂 결과 경로:
-${env.RESULT_DIR}
-"""
+                            html += """
+                            <tr>
+                                <td>${major}</td>
+                                <td>${minor}</td>
+                                <td>${s.total}</td>
+                                <td class='pass'>${s.pass}</td>
+                                <td class='fail'>${s.fail}</td>
+                                <td>${failRate}%</td>
+                            </tr>
+                            """
+                        }
                     }
-                }
-            }
-        }
 
-        stage('GitHub Update') {
-            steps {
-                script {
-                    try {
-                        bat 'git config user.email "jenkins@example.com"'
-                        bat 'git config user.name "Jenkins CI"'
-                        bat "git add \"${env.RESULT_DIR}\\7DS_QA_Report.html\""
-                        bat 'git commit -m "QA_Report_Auto_Update"'
-                        bat 'git push origin HEAD'
-                    } catch (Exception e) {
-                        error "[ERR-GIT-003] Git 업로드 실패"
+                    html += "</table>"
+
+                    // 🔥 실패 상세 (경로 포함)
+                    def fails = testResults.findAll { it.result == "FAIL" }
+
+                    html += """
+                    <h2>⚠️ 실패 상세</h2>
+                    <ul>
+                    """
+
+                    def slackMsg = "❌ QA 실패 (${fails.size()}건)\n\n"
+
+                    fails.each {
+                        def path = "${it.major} > ${it.minor} > ${it.scenario}"
+                        html += "<li>${path} → 실패</li>"
+                        slackMsg += "- ${path}\n"
+                    }
+
+                    html += "</ul></body></html>"
+
+                    writeFile file: "${env.RESULT_DIR}\\QA_Report.html", text: html, encoding: 'UTF-8'
+
+                    if(fails.size() > 0) {
+                        env.SLACK_MSG = slackMsg
+                        error "[ERR-QA-002] QA 실패 (${fails.size()}건)"
+                    } else {
+                        env.SLACK_MSG = "✅ QA 성공\n결과 경로: ${env.RESULT_DIR}"
                     }
                 }
             }
@@ -105,30 +154,27 @@ ${env.RESULT_DIR}
     }
 
     post {
-
         always {
             publishHTML(target: [
                 reportDir: "${env.RESULT_DIR}",
-                reportFiles: '7DS_QA_Report.html',
-                reportName: 'QA Report',
-                keepAll: true,
-                alwaysLinkToLastBuild: true
+                reportFiles: 'QA_Report.html',
+                reportName: 'QA Report'
             ])
         }
 
         success {
-            slackSend (
+            slackSend(
                 channel: "#새-채널",
                 color: '#00FF00',
-                message: env.SLACK_SUCCESS_MSG ?: "빌드 성공"
+                message: env.SLACK_MSG
             )
         }
 
         failure {
-            slackSend (
+            slackSend(
                 channel: "#새-채널",
                 color: '#FF0000',
-                message: env.SLACK_FAIL_MSG ?: "빌드 실패"
+                message: env.SLACK_MSG
             )
         }
     }
