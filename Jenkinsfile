@@ -10,15 +10,16 @@ pipeline {
         stage('QA 결과 분석 및 HTML 생성') {
             steps {
                 script {
-                    // BASE_PATH를 파라미터로 가져옵니다.
-                    def basePath = params.BASE_PATH\
+                    // BASE_PATH를 파라미터로 가져옵니다. (끝에 있던 \ 기호 제거)
+                    def basePath = params.BASE_PATH
                     
                     // 미리 빌드된 jar 파일의 경로 (예: 프로젝트 루트 디렉토리에 위치한다고 가정)
                     def jarPath = "QAReportGenerator.jar"
                     
+                    // Windows 환경이므로 sh 대신 bat을 사용합니다.
                     // java -jar 명령어로 실행하며 파라미터로 basePath를 넘깁니다.
                     // -Dfile.encoding=UTF-8 옵션으로 한글 깨짐을 원천 차단합니다.
-                    sh """
+                    bat """
                         java -Dfile.encoding=UTF-8 -jar ${jarPath} "${basePath}"
                     """
                 }
