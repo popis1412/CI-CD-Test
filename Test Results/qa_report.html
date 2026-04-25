@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>QA 정량 분석 리포트</title>
+    <style>
+        body { font-family: 'Segoe UI', 'Malgun Gothic', sans-serif; margin: 40px; color: #333; background-color: #f9f9f9; }
+        .container { background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
+        h1 { color: #1a2a6c; border-bottom: 4px solid #1a2a6c; padding-bottom: 15px; text-align: center; }
+        h2 { color: #2c3e50; margin-top: 50px; border-left: 5px solid #1a2a6c; padding-left: 15px; }
+        h3 { color: #555; margin-top: 30px; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 30px; border-radius: 8px; overflow: hidden; }
+        th, td { border: 1px solid #eee; padding: 14px; text-align: center; }
+        th { background-color: #f1f3f5; font-weight: 700; color: #444; }
+        tr:hover { background-color: #f8f9fa; }
+        .pass { color: #2ecc71; font-weight: bold; }
+        .fail { color: #e74c3c; font-weight: bold; }
+        .not-test { color: #f39c12; font-weight: bold; }
+        .blocked { color: #9b59b6; font-weight: bold; }
+        .total-row { background-color: #f1f5f8; font-weight: bold; }
+        .defect-table { text-align: left; }
+        .center { text-align: center; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📋 QA 테스트 결과 정량 분석 보고서</h1>
+
+    <h2>0. 테스트 요약 (Overall)</h2>
+    <table>
+        <tr><th>항목</th><th>카운트</th><th>비율</th></tr>
+        <tr class="total-row"><td>Total Test Cases</td><td>200</td><td>100.0%</td></tr>
+        <tr><td><span class="pass">Pass</span></td><td>0</td><td>0.0%</td></tr>
+        <tr><td><span class="fail">Fail</span></td><td>4</td><td>2.0%</td></tr>
+        <tr><td><span class="not-test">Not Test</span></td><td>196</td><td>98.0%</td></tr>
+        <tr><td><span class="blocked">Blocked</span></td><td>0</td><td>0.0%</td></tr>
+    </table>
+
+    <h2>1. 대분류 / 중분류 별 테스트 현황</h2>
+    <table>
+        <tr><th>대분류</th><th>중분류</th><th>현황</th><th>개수</th></tr>
+<tr><td>전투 UI</td><td>레이드 타이머</td><td><span class="fail">Fail</span></td><td>1</td></tr><tr><td>전투 UI</td><td>레이드 타이머</td><td><span class="not-test">Not Test</span></td><td>5</td></tr><tr><td>전투 UI</td><td>마력(MP)바</td><td><span class="fail">Fail</span></td><td>2</td></tr><tr><td>전투 UI</td><td>마력(MP)바</td><td><span class="not-test">Not Test</span></td><td>6</td></tr><tr><td>전투 UI</td><td>메뉴</td><td><span class="not-test">Not Test</span></td><td>4</td></tr><tr><td>전투 UI</td><td>미니맵</td><td><span class="not-test">Not Test</span></td><td>10</td></tr><tr><td>전투 UI</td><td>별의 서 마력</td><td><span class="not-test">Not Test</span></td><td>8</td></tr><tr><td>전투 UI</td><td>보스 HP바</td><td><span class="not-test">Not Test</span></td><td>6</td></tr><tr><td>전투 UI</td><td>보스 상태</td><td><span class="not-test">Not Test</span></td><td>6</td></tr><tr><td>전투 UI</td><td>보스 정보</td><td><span class="not-test">Not Test</span></td><td>4</td></tr><tr><td>전투 UI</td><td>캐릭터 HP바</td><td><span class="not-test">Not Test</span></td><td>12</td></tr><tr><td>전투 UI</td><td>캐릭터 버프</td><td><span class="not-test">Not Test</span></td><td>10</td></tr><tr><td>전투 UI</td><td>파티원 UI</td><td><span class="not-test">Not Test</span></td><td>30</td></tr><tr><td>전투 UI</td><td>하단 오른쪽 UI</td><td><span class="fail">Fail</span></td><td>1</td></tr><tr><td>전투 UI</td><td>하단 오른쪽 UI</td><td><span class="not-test">Not Test</span></td><td>37</td></tr><tr><td>전투 UI</td><td>하단 왼쪽 UI</td><td><span class="not-test">Not Test</span></td><td>10</td></tr><tr><td>전투 시스템</td><td>보스 모델링</td><td><span class="not-test">Not Test</span></td><td>8</td></tr><tr><td>전투 시스템</td><td>사운드</td><td><span class="not-test">Not Test</span></td><td>2</td></tr><tr><td>전투 연출</td><td>데미지 텍스트</td><td><span class="not-test">Not Test</span></td><td>8</td></tr><tr><td>전투 연출</td><td>이펙트</td><td><span class="not-test">Not Test</span></td><td>4</td></tr><tr><td>환경 UI</td><td>NPC 정보</td><td><span class="not-test">Not Test</span></td><td>4</td></tr><tr><td>환경 UI</td><td>나침반</td><td><span class="not-test">Not Test</span></td><td>2</td></tr><tr><td>환경 UI</td><td>로딩</td><td><span class="not-test">Not Test</span></td><td>2</td></tr><tr><td>환경 UI</td><td>메뉴 닫기</td><td><span class="not-test">Not Test</span></td><td>2</td></tr><tr><td>환경 UI</td><td>상호작용</td><td><span class="not-test">Not Test</span></td><td>2</td></tr><tr><td>환경 UI</td><td>시스템 시간</td><td><span class="not-test">Not Test</span></td><td>2</td></tr><tr><td>환경 UI</td><td>알림</td><td><span class="not-test">Not Test</span></td><td>2</td></tr><tr><td>환경 UI</td><td>지역 정보</td><td><span class="not-test">Not Test</span></td><td>2</td></tr><tr><td>환경 UI</td><td>채팅 로그</td><td><span class="not-test">Not Test</span></td><td>2</td></tr><tr><td>환경 UI</td><td>퀘스트 정보</td><td><span class="not-test">Not Test</span></td><td>6</td></tr></table><h2>2. 시나리오별 실패 비율</h2>
+    <h3>📁 TC_Battle</h3>
+    <table>
+        <tr><th>시나리오</th><th>실패 비율</th></tr>
+        <tr><td>TC_Battle</td><td class="fail">4.0%</td></tr>
+    </table>
+    <h3>📁 TC_Test</h3>
+    <table>
+        <tr><th>시나리오</th><th>실패 비율</th></tr>
+        <tr><td>TC_Test</td><td class="fail">0.0%</td></tr>
+    </table><h2>3. 발견된 결함 상세 (Defect List)</h2>
+    <table class="defect-table">
+        <tr><th>No</th><th>시나리오</th><th>대분류</th><th>중분류</th><th>행</th><th>테스트 액션</th></tr>
+        <tr>
+            <td class="center">1</td>
+            <td class="center">TC_Battle</td>
+            <td class="center">전투 UI</td>
+            <td class="center">레이드 타이머</td>
+            <td class="center">10</td>
+            <td>화면 상단 중앙의 타이머 영역을 확인한다.</td>
+        </tr>
+        <tr>
+            <td class="center">2</td>
+            <td class="center">TC_Battle</td>
+            <td class="center">전투 UI</td>
+            <td class="center">마력(MP)바</td>
+            <td class="center">67</td>
+            <td>MP바의 게이지 변화를 관찰한다.</td>
+        </tr>
+        <tr>
+            <td class="center">3</td>
+            <td class="center">TC_Battle</td>
+            <td class="center">전투 UI</td>
+            <td class="center">마력(MP)바</td>
+            <td class="center">68</td>
+            <td>MP바의 게이지 회복을 관찰한다.</td>
+        </tr>
+        <tr>
+            <td class="center">4</td>
+            <td class="center">TC_Battle</td>
+            <td class="center">전투 UI</td>
+            <td class="center">하단 오른쪽 UI</td>
+            <td class="center">82</td>
+            <td>Q 아이콘 중앙의 숫자 표시를 확인한다.</td>
+        </tr></table></div></body></html>

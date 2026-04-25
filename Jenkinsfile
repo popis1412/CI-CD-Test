@@ -8,8 +8,8 @@ pipeline {
     environment {
         PYTHON_EXE = "C:\\Program Files\\Python312\\python.exe"
         SLACK_CHANNEL = '새-채널'
-        // [수정] 생성된 리포트가 저장되는 실제 로컬/네트워크 전체 경로
-        REPORT_FULL_PATH = "${WORKSPACE}\\Test Results\\qa_report.html"
+        // 리포트 파일 위치
+        REPORT_FILE_PATH = "Test Results\\qa_report.html"
     }
 
     stages {
@@ -33,7 +33,7 @@ pipeline {
                     chcp 65001 >nul
                     set PYTHONIOENCODING=utf-8
                     
-                    echo [로그] 라이브러리 설치 및 리포트 생성 시작...
+                    echo [로그] 리포트 생성 시작...
                     "${PYTHON_EXE}" -m pip install openpyxl --quiet
                     "${PYTHON_EXE}" make_report.py "${basePath}"
                     """
@@ -45,27 +45,29 @@ pipeline {
     post {
         success {
             script {
-                // PowerShell을 사용하여 UTF-8 리포트 내 'Fail' 키워드 개수 정밀 체크
+                // 1. 정확한 결함 개수 계산 (HTML 태그 내의 Fail만 추출)
+                // 단순히 'Fail'을 세는 것이 아니라 <td>Fail</td> 처럼 데이터 셀에 있는 것만 필터링하여 정확도를 높입니다.
                 def failCountStr = powershell(
                     returnStdout: true, 
-                    script: "(Get-Content -Path '${env.REPORT_FULL_PATH}' -Encoding UTF8 | Select-String -Pattern 'Fail' | Measure-Object).Count"
+                    script: "(Get-Content -Path '${REPORT_FILE_PATH}' -Encoding UTF8 | Select-String -Pattern '<td>Fail</td>' | Measure-Object).Count"
                 ).trim()
                 
                 int failCount = failCountStr ? failCountStr.toInteger() : 0
-                
-                // 슬랙에 표시될 로컬 파일 경로 URL 형식 (file:///)
-                def fileUrl = "file:///${env.REPORT_FULL_PATH.replace('\\', '/')}"
+                echo "[확인] 정밀 필터링된 Fail 개수: ${failCount}"
 
                 if (failCount > 0) {
+                    // 2. 결함이 있는 경우: 메시지 전송 후 파일 직접 업로드
                     slackSend(
                         channel: "#${SLACK_CHANNEL}",
                         color: 'warning',
-                        message: """@here
-✅ **QA 빌드 완료 (결함 발견: ${failCount}건)**
-
-[고쳐야 되는 것들 목록 - 발견된 결함 상세 표]
-테스트 결과 총 **${failCount}개**의 결함항목이 발견되었습니다. 내용을 확인하고 수정해 주세요.
-🔗 리포트 파일 경로: ${fileUrl}"""
+                        message: "@here\n✅ **QA 빌드 완료 (결함 발견: ${failCount}건)**\n\n[고쳐야 되는 것들 목록 - 발견된 결함 상세 표]\n리포트 파일(${REPORT_FILE_PATH})을 아래에 첨부합니다. 다운로드하여 확인해 주세요."
+                    )
+                    
+                    // 3. 생성된 HTML 파일 자체를 슬랙 채널에 업로드 (다른 사람도 즉시 확인 가능)
+                    slackUploadFile(
+                        channel: "#${SLACK_CHANNEL}",
+                        filePath: "${REPORT_FILE_PATH}",
+                        initialComment: "상세 결함 리포트 파일입니다."
                     )
                 } else {
                     slackSend(
@@ -81,7 +83,7 @@ pipeline {
                 slackSend(
                     channel: "#${SLACK_CHANNEL}",
                     color: 'danger',
-                    message: "@here\n❌ **빌드를 실패했습니다.**\n파이프라인 로그를 확인하거나 파이썬 설치 경로를 점검해 주세요."
+                    message: "@here\n❌ **빌드를 실패했습니다.**\n파이프라인 로그를 확인해 주세요.\"
                 )
             }
         }
