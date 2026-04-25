@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'WORKSPACE_PATH', defaultValue: '', description: 'Workspace Path')
+        string(name: 'WORKSPACE_PATH', defaultValue: '', description: 'C:\\파일경로')
     }
 
     environment {
@@ -16,12 +16,10 @@ pipeline {
 
         stage('Prepare') {
             steps {
-                script {
-                    bat """
-                    if exist "${RESULT_DIR}" rmdir /s /q "${RESULT_DIR}"
-                    mkdir "${RESULT_DIR}"
-                    """
-                }
+                bat """
+                if exist "${RESULT_DIR}" rmdir /s /q "${RESULT_DIR}"
+                mkdir "${RESULT_DIR}"
+                """
             }
         }
 
@@ -36,20 +34,21 @@ pipeline {
                     }
 
                     def content = readFile(TEST_FILE_PATH)
-
-                    // 빈 줄 제거
-                    def lines = content.split(/\r?\n/).findAll { it.trim() }
+                    def lines = content.split("\\r?\\n")
 
                     def testResults = []
 
                     // ======================
-                    // CSV PARSE (G열 기준)
+                    // CSV PARSE (G열 = index 6)
                     // ======================
                     for (int i = 1; i < lines.size(); i++) {
 
-                        def cols = lines[i].split(",", -1)
+                        def line = lines[i].trim()
+                        if (!line) continue
 
-                        if (cols.size() < 7) continue
+                        def cols = line.split(",")
+
+                        if (cols.size() <= 6) continue
 
                         testResults << [
                             major: cols[0]?.trim(),
@@ -60,54 +59,62 @@ pipeline {
                     }
 
                     // ======================
-                    // 정규화
+                    // NORMALIZE
                     // ======================
                     def normalize = { r ->
-                        if (!r) return "Not Test"
-                        def v = r.toLowerCase()
+                        if (!r) return "NOT TEST"
+                        def v = r.trim().toUpperCase()
 
-                        if (v == "pass") return "Pass"
-                        if (v == "fail") return "Fail"
-                        if (v == "blocked") return "Blocked"
-                        if (v == "n/a" || v == "na") return "N/A"
-
-                        return "Not Test"
+                        if (v == "PASS") return "PASS"
+                        if (v == "FAIL") return "FAIL"
+                        if (v == "BLOCKED") return "BLOCKED"
+                        if (v == "N/A") return "N/A"
+                        return "NOT TEST"
                     }
 
-                    testResults.each { it.result = normalize(it.result) }
+                    testResults.each {
+                        it.result = normalize(it.result)
+                    }
 
                     // ======================
-                    // 전체 통계
+                    // STATS
                     // ======================
                     def stats = [
                         Total: testResults.size(),
-                        Pass: 0,
-                        Fail: 0,
-                        Blocked: 0,
-                        "Not Test": 0,
+                        PASS: 0,
+                        FAIL: 0,
+                        BLOCKED: 0,
+                        "NOT TEST": 0,
                         "N/A": 0
                     ]
 
-                    testResults.each { t ->
-                        stats[t.result] = (stats[t.result] ?: 0) + 1
+                    testResults.each {
+                        stats[it.result] = (stats[it.result] ?: 0) + 1
                     }
 
-                    def failRate = stats.Total > 0 ? stats.Fail * 100.0 / stats.Total : 0
+                    def failRate = stats.Total > 0 ?
+                        (stats.FAIL * 100.0 / stats.Total) : 0
 
                     // ======================
-                    // ★ 핵심: 집계 테이블
+                    // GROUPING (요구사항 핵심)
                     // ======================
-                    def summaryMap = [:]
+                    def tableMap = [:]
 
                     testResults.each { t ->
                         def key = "${t.major}|${t.minor}|${t.result}"
-                        summaryMap[key] = (summaryMap[key] ?: 0) + 1
+
+                        if (!tableMap[key]) {
+                            tableMap[key] = [
+                                major: t.major,
+                                minor: t.minor,
+                                status: t.result,
+                                count: 0
+                            ]
+                        }
+                        tableMap[key].count++
                     }
 
-                    // ======================
-                    // Fail 목록
-                    // ======================
-                    def fails = testResults.findAll { it.result == "Fail" }
+                    def rows = tableMap.values().toList()
 
                     // ======================
                     // HTML
@@ -115,39 +122,39 @@ pipeline {
                     def html = """
                     <html>
                     <head>
-                        <meta charset="UTF-8">
                         <style>
                             table { border-collapse: collapse; width:100%; }
                             th, td { border:1px solid #ddd; padding:8px; }
-                            th { background:#f2f2f2; }
+                            th { background:#333; color:white; }
                         </style>
                     </head>
                     <body>
 
                     <h2>${PROJECT_NAME}</h2>
 
-                    <h3>전체 통계</h3>
-                    <p>Total: ${stats.Total} | Pass: ${stats.Pass} | Fail: ${stats.Fail}</p>
+                    <h3>Summary</h3>
+                    <p>Total: ${stats.Total}</p>
+                    <p>Fail: ${stats.FAIL}</p>
+                    <p>Fail Rate: ${String.format('%.2f', failRate)}%</p>
 
-                    <h3>대분류 | 중분류 | 상태 | 개수</h3>
+                    <h3>Detailed Table</h3>
+
                     <table>
                         <tr>
-                            <th>대분류</th>
-                            <th>중분류</th>
-                            <th>상태</th>
-                            <th>개수</th>
+                            <th>Major</th>
+                            <th>Minor</th>
+                            <th>Status</th>
+                            <th>Count</th>
                         </tr>
                     """
 
-                    summaryMap.each { k, v ->
-                        def p = k.split("\\|")
-
+                    rows.each {
                         html += """
                         <tr>
-                            <td>${p[0]}</td>
-                            <td>${p[1]}</td>
-                            <td>${p[2]}</td>
-                            <td>${v}</td>
+                            <td>${it.major}</td>
+                            <td>${it.minor}</td>
+                            <td>${it.status}</td>
+                            <td>${it.count}</td>
                         </tr>
                         """
                     }
@@ -155,79 +162,51 @@ pipeline {
                     html += """
                     </table>
 
-                    <h3>Fail 리스트</h3>
-                    """
-
-                    if (fails.size() == 0) {
-                        html += "<p>Fail 없음</p>"
-                    } else {
-                        html += "<ul>"
-                        fails.each {
-                            html += "<li>${it.major} / ${it.minor} / ${it.scenario}</li>"
-                        }
-                        html += "</ul>"
-                    }
-
-                    html += """
                     </body>
                     </html>
                     """
 
-                    writeFile file: "${RESULT_DIR}\\QA_Report.html", text: html
+                    writeFile file: "${RESULT_DIR}\\report.html", text: html
 
-                    println "[INFO] FAIL: ${fails.size()}"
-                    println "[INFO] TOTAL: ${stats.Total}"
+                    // ======================
+                    // FIX: stats를 post에서 쓰기 위해 저장
+                    // ======================
+                    writeFile file: "${RESULT_DIR}\\stats.txt", text: """
+TOTAL=${stats.Total}
+FAIL=${stats.FAIL}
+"""
 
-                    if (fails.size() > 0) {
-                        currentBuild.result = "FAILURE"
+                    // store for post
+                    currentBuild.description = "TOTAL=${stats.Total}, FAIL=${stats.FAIL}"
+
+                    echo "[INFO] TOTAL: ${stats.Total}"
+                    echo "[INFO] FAIL: ${stats.FAIL}"
+
+                    if (stats.FAIL > 0) {
+                        currentBuild.result = 'FAILURE'
+                    } else {
+                        currentBuild.result = 'SUCCESS'
                     }
                 }
             }
         }
     }
 
-post {
+    post {
+        success {
+            slackSend channel: '#새-채널',
+                color: 'good',
+                message: "✅ QA 성공: ${currentBuild.description}"
+        }
 
-    always {
-        archiveArtifacts artifacts: 'Test Results/**'
-    }
+        failure {
+            slackSend channel: '#새-채널',
+                color: 'danger',
+                message: "❌ QA 실패: ${currentBuild.description}"
+        }
 
-    success {
-        script {
-            echo "✅ QA 성공"
-
-            slackSend(
-                color: "good",
-                message: """
-✅ QA SUCCESS
-Project: ${env.PROJECT_NAME}
-Total: ${env.TOTAL}
-Pass: ${env.PASS}
-Fail: ${env.FAIL}
-Fail Rate: ${env.FAILRATE}
-Report: ${env.BUILD_URL}artifact/Test Results/QA_Report.html
-"""
-            )
+        always {
+            archiveArtifacts artifacts: 'Test Results/**'
         }
     }
-
-    failure {
-        script {
-            echo "❌ QA 실패"
-
-            slackSend(
-                color: "danger",
-                message: """
-❌ QA FAILURE
-Project: ${env.PROJECT_NAME}
-Total: ${env.TOTAL}
-Pass: ${env.PASS}
-Fail: ${env.FAIL}
-Fail Rate: ${env.FAILRATE}
-Report: ${env.BUILD_URL}artifact/Test Results/QA_Report.html
-"""
-            )
-        }
-    }
-}
 }
