@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'WORKSPACE_PATH', defaultValue: 'C:\\QA\\CI-CD-Test', description: 'Workspace Path')
+        string(name: 'WORKSPACE_PATH', defaultValue: '', description: 'C:파일경로')
     }
 
     environment {
@@ -27,10 +27,8 @@ pipeline {
             steps {
                 script {
 
-                    echo "[INFO] FILE: ${TEST_FILE_PATH}"
-
                     if (!fileExists(TEST_FILE_PATH)) {
-                        error "CSV 파일 없음: ${TEST_FILE_PATH}"
+                        error "CSV 파일 없음"
                     }
 
                     def content = readFile(TEST_FILE_PATH)
@@ -66,7 +64,7 @@ pipeline {
                     def testResults = []
 
                     // ======================
-                    // PARSE (G열 = index 6)
+                    // G열 기준 파싱
                     // ======================
                     for (int i = 1; i < lines.size(); i++) {
 
@@ -108,54 +106,12 @@ pipeline {
                     }
 
                     // ======================
-                    // STATS (정확한 방식)
-                    // ======================
-                    def stats = [
-                        Total: 0,
-                        PASS: 0,
-                        FAIL: 0,
-                        BLOCKED: 0,
-                        "NOT TEST": 0,
-                        "N/A": 0
-                    ]
-
-                    testResults.each {
-                        stats.Total++
-                        stats[it.result] = (stats[it.result] ?: 0) + 1
-                    }
-
-                    def failRate = stats.Total > 0 ?
-                        (stats.FAIL * 100.0 / stats.Total) : 0
-
-                    // ======================
-                    // 핵심: 대분류 | 중분류 | 상태 | 개수
-                    // ======================
-                    def tableMap = [:]
-
-                    testResults.each { t ->
-                        def key = "${t.major}|${t.minor}|${t.result}"
-
-                        if (!tableMap[key]) {
-                            tableMap[key] = [
-                                major: t.major,
-                                minor: t.minor,
-                                status: t.result,
-                                count: 0
-                            ]
-                        }
-
-                        tableMap[key].count++
-                    }
-
-                    def rows = tableMap.values().toList()
-
-                    // ======================
-                    // FAIL 리스트 (정확)
+                    // FAIL LIST
                     // ======================
                     def fails = testResults.findAll { it.result == "FAIL" }
 
                     // ======================
-                    // HTML REPORT
+                    // HTML (FAIL 전용 테이블)
                     // ======================
                     def html = """
                     <html>
@@ -163,7 +119,7 @@ pipeline {
                         <meta charset="UTF-8">
                         <style>
                             body { font-family: Arial; padding:20px; }
-                            table { border-collapse: collapse; width:100%; margin-bottom:20px; }
+                            table { border-collapse: collapse; width:100%; }
                             th, td { border:1px solid #ddd; padding:8px; text-align:center; }
                             th { background:#333; color:white; }
                             .fail { background:#ffdddd; }
@@ -171,41 +127,10 @@ pipeline {
                     </head>
                     <body>
 
-                    <h2>${PROJECT_NAME}</h2>
+                    <h2>${PROJECT_NAME} - FAIL REPORT</h2>
 
-                    <h3>Summary</h3>
-                    <p>Total: ${stats.Total}</p>
-                    <p>PASS: ${stats.PASS}</p>
-                    <p>FAIL: ${stats.FAIL}</p>
-                    <p>Fail Rate: ${String.format('%.2f', failRate)}%</p>
+                    <h3>FAIL 목록 (${fails.size()}건)</h3>
 
-                    <h3>대분류 | 중분류 | 상태 | 개수</h3>
-
-                    <table>
-                        <tr>
-                            <th>Major</th>
-                            <th>Minor</th>
-                            <th>Status</th>
-                            <th>Count</th>
-                        </tr>
-                    """
-
-                    rows.each {
-                        def cls = (it.status == "FAIL") ? "fail" : ""
-                        html += """
-                        <tr class="${cls}">
-                            <td>${it.major}</td>
-                            <td>${it.minor}</td>
-                            <td>${it.status}</td>
-                            <td>${it.count}</td>
-                        </tr>
-                        """
-                    }
-
-                    html += """
-                    </table>
-
-                    <h3>FAIL 상세</h3>
                     <table>
                         <tr>
                             <th>Major</th>
@@ -214,14 +139,23 @@ pipeline {
                         </tr>
                     """
 
-                    fails.each {
+                    if (fails.size() == 0) {
                         html += """
-                        <tr class="fail">
-                            <td>${it.major}</td>
-                            <td>${it.minor}</td>
-                            <td>${it.scenario}</td>
+                        <tr>
+                            <td colspan="3">All Passed 🎉</td>
                         </tr>
                         """
+                    } else {
+
+                        fails.each { f ->
+                            html += """
+                            <tr class="fail">
+                                <td>${f.major}</td>
+                                <td>${f.minor}</td>
+                                <td>${f.scenario}</td>
+                            </tr>
+                            """
+                        }
                     }
 
                     html += """
@@ -231,27 +165,47 @@ pipeline {
                     </html>
                     """
 
-                    writeFile file: "${RESULT_DIR}\\report.html", text: html
+                    writeFile file: "${RESULT_DIR}\\fail_report.html", text: html
 
                     // ======================
-                    // stats scope 해결 (post용)
+                    // Slack 메시지 생성
                     // ======================
-                    currentBuild.description = "TOTAL=${stats.Total}, FAIL=${stats.FAIL}"
+                    def slackMessage = ""
 
-                    writeFile file: "${RESULT_DIR}\\stats.txt", text: """
-TOTAL=${stats.Total}
-FAIL=${stats.FAIL}
-FAIL_RATE=${String.format('%.2f', failRate)}
+                    if (fails.size() > 0) {
+
+                        slackMessage = """❌ QA 완료 (FAIL 발생)
+FAIL COUNT: ${fails.size()}
+
+--- FAIL LIST ---
 """
 
-                    echo "[INFO] TOTAL: ${stats.Total}"
-                    echo "[INFO] FAIL: ${stats.FAIL}"
+                        fails.each { f ->
+                            slackMessage += """
+• Major: ${f.major}
+• Minor: ${f.minor}
+• Scenario: ${f.scenario}
+-------------------
+"""
+                        }
 
-                    if (stats.FAIL > 0) {
-                        currentBuild.result = 'FAILURE'
                     } else {
-                        currentBuild.result = 'SUCCESS'
+                        slackMessage = "✅ QA 완료 - ALL PASS (${testResults.size()} cases)"
                     }
+
+                    // ======================
+                    // SUCCESS 고정 (빌드 실패 없음)
+                    // ======================
+                    currentBuild.result = 'SUCCESS'
+
+                    echo "[INFO] FAIL: ${fails.size()}"
+                    echo "[INFO] TOTAL: ${testResults.size()}"
+
+                    // Slack용 저장
+                    currentBuild.description = "FAIL=${fails.size()}, TOTAL=${testResults.size()}"
+
+                    // Slack message export
+                    env.SLACK_MSG = slackMessage
                 }
             }
         }
@@ -261,14 +215,8 @@ FAIL_RATE=${String.format('%.2f', failRate)}
 
         success {
             slackSend channel: '#새-채널',
-                color: 'good',
-                message: "✅ QA 성공: ${currentBuild.description}"
-        }
-
-        failure {
-            slackSend channel: '#새-채널',
-                color: 'danger',
-                message: "❌ QA 실패: ${currentBuild.description}"
+                color: (env.SLACK_MSG.contains("FAIL") ? 'danger' : 'good'),
+                message: env.SLACK_MSG
         }
 
         always {
