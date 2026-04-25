@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'WORKSPACE_PATH', defaultValue: '', description: 'C:\파일경로')
+        string(name: 'WORKSPACE_PATH', defaultValue: '', description: 'C:\\파일경로')
     }
 
     environment {
