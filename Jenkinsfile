@@ -2,14 +2,14 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'WORKSPACE_PATH', defaultValue: 'C:\\QA\\CI-CD-Test', description: '작업 경로 입력')
+        string(name: 'WORKSPACE_PATH', defaultValue: 'C:\\QA\\CI-CD-Test', description: '로컬 작업 경로')
     }
 
     environment {
+        BASE_DIR = "${params.WORKSPACE_PATH}"
         LIBS_DIR = "${params.WORKSPACE_PATH}\\libs"
         TEST_FILE = "${params.WORKSPACE_PATH}\\Tests\\QA_Test.xlsx"
         REPORT_DIR = "${params.WORKSPACE_PATH}\\Test Results"
-        REPORT_FILE = "${params.WORKSPACE_PATH}\\Test Results\\qa_report.html"
     }
 
     stages {
@@ -17,25 +17,24 @@ pipeline {
         // =========================
         // 1. PATH 확인
         // =========================
-        stage('Path Check') {
+        stage('Workspace Init') {
             steps {
                 script {
-
-                    echo "========================"
-                    echo "USER PATH = ${params.WORKSPACE_PATH}"
-                    echo "========================"
+                    echo "=============================="
+                    echo "BASE DIR = ${BASE_DIR}"
+                    echo "=============================="
 
                     bat """
-                    echo WORKSPACE_PATH = ${params.WORKSPACE_PATH}
-                    if not exist "${params.WORKSPACE_PATH}" mkdir "${params.WORKSPACE_PATH}"
-                    if not exist "${params.WORKSPACE_PATH}\\Tests" mkdir "${params.WORKSPACE_PATH}\\Tests"
+                    if not exist "${BASE_DIR}" mkdir "${BASE_DIR}"
+                    if not exist "${BASE_DIR}\\Tests" mkdir "${BASE_DIR}\\Tests"
+                    if not exist "${BASE_DIR}\\Test Results" mkdir "${BASE_DIR}\\Test Results"
                     """
                 }
             }
         }
 
         // =========================
-        // 2. LIBS SETUP
+        // 2. LIBS 다운로드
         // =========================
         stage('Setup Libraries') {
             steps {
@@ -45,24 +44,24 @@ pipeline {
                     if not exist "${LIBS_DIR}" mkdir "${LIBS_DIR}"
                     """
 
-                    def poiJar = "${LIBS_DIR}\\poi-5.2.5.jar"
-                    def ooxmlJar = "${LIBS_DIR}\\poi-ooxml-5.2.5.jar"
-                    def xmlbeansJar = "${LIBS_DIR}\\xmlbeans-5.2.1.jar"
+                    def poi = "${LIBS_DIR}\\poi-5.2.5.jar"
+                    def ooxml = "${LIBS_DIR}\\poi-ooxml-5.2.5.jar"
+                    def xmlbeans = "${LIBS_DIR}\\xmlbeans-5.2.1.jar"
 
-                    if (!fileExists(poiJar) || !fileExists(ooxmlJar) || !fileExists(xmlbeansJar)) {
+                    if (!fileExists(poi) || !fileExists(ooxml) || !fileExists(xmlbeans)) {
 
                         echo "[INFO] POI 다운로드 시작"
 
                         bat """
-                        powershell -Command Invoke-WebRequest -Uri https://repo1.maven.org/maven2/org/apache/poi/poi/5.2.5/poi-5.2.5.jar -OutFile "${poiJar}"
+                        powershell -Command Invoke-WebRequest -Uri https://repo1.maven.org/maven2/org/apache/poi/poi/5.2.5/poi-5.2.5.jar -OutFile "${poi}"
                         """
 
                         bat """
-                        powershell -Command Invoke-WebRequest -Uri https://repo1.maven.org/maven2/org/apache/poi/poi-ooxml/5.2.5/poi-ooxml-5.2.5.jar -OutFile "${ooxmlJar}"
+                        powershell -Command Invoke-WebRequest -Uri https://repo1.maven.org/maven2/org/apache/poi/poi-ooxml/5.2.5/poi-ooxml-5.2.5.jar -OutFile "${ooxml}"
                         """
 
                         bat """
-                        powershell -Command Invoke-WebRequest -Uri https://repo1.maven.org/maven2/org/apache/xmlbeans/xmlbeans/5.2.1/xmlbeans-5.2.1.jar -OutFile "${xmlbeansJar}"
+                        powershell -Command Invoke-WebRequest -Uri https://repo1.maven.org/maven2/org/apache/xmlbeans/xmlbeans/5.2.1/xmlbeans-5.2.1.jar -OutFile "${xmlbeans}"
                         """
 
                         echo "[DONE] 라이브러리 다운로드 완료"
@@ -75,21 +74,9 @@ pipeline {
         }
 
         // =========================
-        // 3. PREPARE
+        // 3. EXCEL 존재 확인
         // =========================
-        stage('Prepare') {
-            steps {
-                bat """
-                if exist "${REPORT_DIR}" rmdir /s /q "${REPORT_DIR}"
-                mkdir "${REPORT_DIR}"
-                """
-            }
-        }
-
-        // =========================
-        // 4. EXCEL 분석 (Java 실행)
-        // =========================
-        stage('QA Analysis') {
+        stage('Validate Input') {
             steps {
                 script {
 
@@ -97,15 +84,31 @@ pipeline {
                         error "Excel 파일 없음: ${TEST_FILE}"
                     }
 
+                    bat """
+                    dir "${BASE_DIR}\\Tests"
+                    """
+                }
+            }
+        }
+
+        // =========================
+        // 4. JAVA 실행
+        // =========================
+        stage('QA Analysis') {
+            steps {
+                script {
+
                     def cmd = """
-                    java -cp "${LIBS_DIR}/*;${params.WORKSPACE_PATH}" ExcelReader "${TEST_FILE}"
+                    java -cp "${LIBS_DIR}/*;${BASE_DIR}" ExcelReader "${TEST_FILE}"
                     """
 
                     def output = bat(returnStdout: true, script: cmd).trim()
 
-                    echo "========================="
+                    echo "=============================="
+                    echo "JAVA OUTPUT"
+                    echo "=============================="
                     echo output
-                    echo "========================="
+                    echo "=============================="
                 }
             }
         }
@@ -113,7 +116,7 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: '**/Test Results/**'
+            archiveArtifacts artifacts: '**/Test Results/**', allowEmptyArchive: true
         }
     }
 }
