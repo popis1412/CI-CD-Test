@@ -1,16 +1,11 @@
 pipeline {
     agent any
 
-    parameters {
-        string(name: 'WORKSPACE_PATH', defaultValue: '', description: 'C:\\파일경로')
-    }
-
     environment {
-        WORKSPACE_PATH = "${params.WORKSPACE_PATH}"
-        LIBS_DIR = "${WORKSPACE_PATH}\\libs"
-        TEST_FILE = "${WORKSPACE_PATH}\\Tests\\QA_Test.xlsx"
-        REPORT_DIR = "${WORKSPACE_PATH}\\Test Results"
-        REPORT_FILE = "${REPORT_DIR}\\qa_report.html"
+        LIBS_DIR = "${env.WORKSPACE}\\libs"
+        TEST_FILE = "${env.WORKSPACE}\\Tests\\QA_Test.xlsx"
+        REPORT_DIR = "${env.WORKSPACE}\\Test Results"
+        REPORT_FILE = "${env.REPORT_DIR}\\qa_report.html"
     }
 
     stages {
@@ -82,7 +77,7 @@ pipeline {
                     // 1. 컴파일 (FIXED)
                     // =========================
                     bat """
-                    javac -cp "${LIBS_DIR}/*" "${WORKSPACE_PATH}\\ExcelReader.java"
+                    javac -cp "${LIBS_DIR}/*" "${env.WORKSPACE}\\ExcelReader.java"
                     """
 
                     // =========================
