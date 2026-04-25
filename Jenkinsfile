@@ -1,37 +1,41 @@
 pipeline {
     agent any
 
+    parameters {
+        string(name: 'WORKSPACE_PATH', defaultValue: 'C:\\QA\\CI-CD-Test', description: '작업 경로 입력')
+    }
+
     environment {
-        LIBS_DIR = "${env.WORKSPACE}\\libs"
-        TEST_FILE = "${env.WORKSPACE}\\Tests\\QA_Test.xlsx"
-        REPORT_DIR = "${env.WORKSPACE}\\Test Results"
-        REPORT_FILE = "${env.WORKSPACE}\\Test Results\\qa_report.html"
+        LIBS_DIR = "${params.WORKSPACE_PATH}\\libs"
+        TEST_FILE = "${params.WORKSPACE_PATH}\\Tests\\QA_Test.xlsx"
+        REPORT_DIR = "${params.WORKSPACE_PATH}\\Test Results"
+        REPORT_FILE = "${params.WORKSPACE_PATH}\\Test Results\\qa_report.html"
     }
 
     stages {
 
         // =========================
-        // 1. WORKSPACE 확인 (UTF-8 안정화)
+        // 1. PATH 확인
         // =========================
-        stage('Workspace Check') {
+        stage('Path Check') {
             steps {
                 script {
 
                     echo "========================"
-                    echo "WORKSPACE = ${env.WORKSPACE}"
+                    echo "USER PATH = ${params.WORKSPACE_PATH}"
                     echo "========================"
 
                     bat """
-                    chcp 65001
-                    echo WORKSPACE = %WORKSPACE%
-                    dir %WORKSPACE%
+                    echo WORKSPACE_PATH = ${params.WORKSPACE_PATH}
+                    if not exist "${params.WORKSPACE_PATH}" mkdir "${params.WORKSPACE_PATH}"
+                    if not exist "${params.WORKSPACE_PATH}\\Tests" mkdir "${params.WORKSPACE_PATH}\\Tests"
                     """
                 }
             }
         }
 
         // =========================
-        // 2. LIBS 자동 다운로드
+        // 2. LIBS SETUP
         // =========================
         stage('Setup Libraries') {
             steps {
@@ -71,7 +75,7 @@ pipeline {
         }
 
         // =========================
-        // 3. 결과 폴더 준비
+        // 3. PREPARE
         // =========================
         stage('Prepare') {
             steps {
@@ -83,7 +87,7 @@ pipeline {
         }
 
         // =========================
-        // 4. Excel 분석 (Git 기반 Java 실행)
+        // 4. EXCEL 분석 (Java 실행)
         // =========================
         stage('QA Analysis') {
             steps {
@@ -93,9 +97,8 @@ pipeline {
                         error "Excel 파일 없음: ${TEST_FILE}"
                     }
 
-                    // Java 실행 (Git에서 가져온 ExcelReader 사용)
                     def cmd = """
-                    java -cp "${LIBS_DIR}/*;${env.WORKSPACE}" ExcelReader "${TEST_FILE}"
+                    java -cp "${LIBS_DIR}/*;${params.WORKSPACE_PATH}" ExcelReader "${TEST_FILE}"
                     """
 
                     def output = bat(returnStdout: true, script: cmd).trim()
