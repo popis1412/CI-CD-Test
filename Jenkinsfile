@@ -41,13 +41,13 @@ pipeline {
             steps {
                 script {
 
-                    def WORK_DIR = "${params.WORKSPACE_PATH}"
-                    def RESULT_DIR = "${params.WORKSPACE_PATH}\\Test Results"
-                    def TEST_FILE = "${params.WORKSPACE_PATH}\\QA_Test.csv"
+                    def WORK_DIR = env.WORKSPACE_PATH
+                    def RESULT_DIR = env.RESULT_DIR
+                    def TEST_FILE = env.TEST_FILE_PATH
 
                     echo "[INFO] WORKSPACE: ${WORK_DIR}"
                     echo "[INFO] RESULT DIR: ${RESULT_DIR}"
-                    echo "[INFO] TEST FILE: ${TEST_FILE}"
+                    echo "[INFO] TEST FILE: ${TEST_FILE }"
 
                     if (!fileExists(TEST_FILE)) {
                         error "[ERR-FILE-001] 테스트 파일 없음: ${TEST_FILE}"
