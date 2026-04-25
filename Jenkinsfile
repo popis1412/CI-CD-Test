@@ -186,7 +186,7 @@ pipeline {
         }
     }
 
-    post {
+post {
 
     always {
         archiveArtifacts artifacts: 'Test Results/**'
@@ -200,11 +200,11 @@ pipeline {
                 color: "good",
                 message: """
 ✅ QA SUCCESS
-Project: ${PROJECT_NAME}
-Total: ${stats.Total}
-Pass: ${stats.Pass}
-Fail: ${stats.Fail}
-Fail Rate: ${String.format('%.2f%%', failRate)}
+Project: ${env.PROJECT_NAME}
+Total: ${env.TOTAL}
+Pass: ${env.PASS}
+Fail: ${env.FAIL}
+Fail Rate: ${env.FAILRATE}
 Report: ${env.BUILD_URL}artifact/Test Results/QA_Report.html
 """
             )
@@ -219,12 +219,12 @@ Report: ${env.BUILD_URL}artifact/Test Results/QA_Report.html
                 color: "danger",
                 message: """
 ❌ QA FAILURE
-Project: ${PROJECT_NAME}
-Total: ${stats.Total}
-Pass: ${stats.Pass}
-Fail: ${stats.Fail}
-Fail Rate: ${String.format('%.2f%%', failRate)}
-Check Report: ${env.BUILD_URL}artifact/Test Results/QA_Report.html
+Project: ${env.PROJECT_NAME}
+Total: ${env.TOTAL}
+Pass: ${env.PASS}
+Fail: ${env.FAIL}
+Fail Rate: ${env.FAILRATE}
+Report: ${env.BUILD_URL}artifact/Test Results/QA_Report.html
 """
             )
         }
