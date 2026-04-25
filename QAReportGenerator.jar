@@ -1,0 +1,115 @@
+import org.apache.poi.ss.usermodel.*;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+
+public class QAReportGenerator {
+    public static void main(String[] args) {
+        // 1. 파라미터 확인 (BASE_PATH)
+        if (args.length < 1) {
+            System.err.println("오류: BASE_PATH 파라미터가 전달되지 않았습니다.");
+            System.exit(1);
+        }
+
+        String basePath = args[0];
+        String excelPath = basePath + "/Tests/QA_Test.xlsx";
+        String outputDir = basePath + "/Test Results";
+        String outputHtml = outputDir + "/qa_report.html";
+
+        // 2. 결과 폴더 생성
+        File dir = new File(outputDir);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        int totalCount = 0;
+        int failCount = 0;
+        int notTestCount = 0;
+
+        // 3. 엑셀 파일 읽기 (Apache POI 사용)
+        try (FileInputStream fis = new FileInputStream(excelPath);
+             Workbook workbook = WorkbookFactory.create(fis)) {
+
+            // 모든 시트를 순회
+            for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
+                Sheet sheet = workbook.getSheetAt(i);
+                
+                // 시트의 각 행을 순회
+                for (Row row : sheet) {
+                    // G열은 0부터 시작하는 인덱스로 6입니다.
+                    Cell cell = row.getCell(6); 
+                    if (cell != null) {
+                        String cellValue = getCellValueAsString(cell).trim();
+
+                        if (cellValue.equals("Pass") || cellValue.equals("Fail") || 
+                            cellValue.equals("Not Test") || cellValue.equals("Blocked")) {
+                            totalCount++;
+                        }
+
+                        if (cellValue.equals("Fail")) {
+                            failCount++;
+                        } else if (cellValue.equals("Not Test")) {
+                            notTestCount++;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("엑셀 파일을 읽는 중 오류가 발생했습니다: " + e.getMessage());
+            System.exit(1);
+        }
+
+        // 4. HTML 문자열 생성 (UTF-8 메타태그 포함)
+        String htmlContent = "<!DOCTYPE html>\n" +
+                "<html lang=\"ko\">\n" +
+                "<head>\n" +
+                "    <meta charset=\"UTF-8\">\n" +
+                "    <title>QA 테스트 결과 보고서</title>\n" +
+                "    <style>\n" +
+                "        body { font-family: 'Malgun Gothic', sans-serif; margin: 30px; }\n" +
+                "        table { border-collapse: collapse; width: 400px; text-align: center; }\n" +
+                "        th, td { border: 1px solid #ddd; padding: 12px; }\n" +
+                "        th { background-color: #f4f4f4; }\n" +
+                "        .fail { color: #d9534f; font-weight: bold; }\n" +
+                "        .not-test { color: #f0ad4e; font-weight: bold; }\n" +
+                "        .total { font-weight: bold; }\n" +
+                "    </style>\n" +
+                "</head>\n" +
+                "<body>\n" +
+                "    <h2>QA 자동화 테스트 결과 요약</h2>\n" +
+                "    <table>\n" +
+                "        <tr><th>항목</th><th>카운트</th></tr>\n" +
+                "        <tr><td class=\"total\">Total (전체 테스트 수)</td><td class=\"total\">" + totalCount + "</td></tr>\n" +
+                "        <tr><td><span class=\"fail\">Fail</span></td><td><span class=\"fail\">" + failCount + "</span></td></tr>\n" +
+                "        <tr><td><span class=\"not-test\">Not Test</span></td><td><span class=\"not-test\">" + notTestCount + "</span></td></tr>\n" +
+                "    </table>\n" +
+                "</body>\n" +
+                "</html>";
+
+        // 5. UTF-8로 강제 지정하여 HTML 파일 출력
+        try (FileOutputStream fos = new FileOutputStream(outputHtml);
+             OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8);
+             BufferedWriter writer = new BufferedWriter(osw)) {
+             
+            writer.write(htmlContent);
+            System.out.println("성공적으로 HTML 리포트가 생성되었습니다: " + outputHtml);
+            
+        } catch (IOException e) {
+            System.err.println("HTML 파일을 저장하는 중 오류가 발생했습니다: " + e.getMessage());
+            System.exit(1);
+        }
+    }
+
+    // 셀 타입을 안전하게 문자열로 변환하는 유틸리티 메서드
+    private static String getCellValueAsString(Cell cell) {
+        switch (cell.getCellType()) {
+            case STRING: return cell.getStringCellValue();
+            case FORMULA: 
+                try {
+                    return cell.getStringCellValue();
+                } catch (IllegalStateException e) {
+                    return String.valueOf(cell.getNumericCellValue());
+                }
+            default: return "";
+        }
+    }
+}
