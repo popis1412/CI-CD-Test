@@ -83,7 +83,7 @@ pipeline {
                 slackSend(
                     channel: "#${SLACK_CHANNEL}",
                     color: 'danger',
-                    message: "@here\n❌ **빌드를 실패했습니다.**\n파이프라인 로그를 확인해 주세요.\"
+                    message: "@here\n❌ **빌드를 실패했습니다.**\n파이프라인 로그를 확인해 주세요.**\n파이프라인 로그를 확인해 주세요.\n🔗 로그: ${env.BUILD_URL}console"
                 )
             }
         }
