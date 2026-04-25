@@ -8,7 +8,7 @@ pipeline {
     environment {
         WORKSPACE_PATH = "${params.WORKSPACE_PATH}"
         RESULT_DIR = "${WORKSPACE_PATH}\\Test Results"
-        TEST_DIR = "${WORKSPACE_PATH}\\Tests"
+        TEST_FILE_PATH = "${WORKSPACE_PATH}\\Tests\\QA_Test.csv"
         REPORT_FILE = "${RESULT_DIR}\\qa_report.html"
     }
 
@@ -23,31 +23,23 @@ pipeline {
             }
         }
 
-        stage('QA Analysis (Sheet Based Multi CSV)') {
+        stage('QA Analysis (Single CSV)') {
             steps {
                 script {
 
                     // =========================
-                    // CSV 목록 (PowerShell)
+                    // CSV 존재 확인
                     // =========================
-                    def csvListRaw = bat(
-                        script: """
-                        powershell -Command "Get-ChildItem '${TEST_DIR}' -Filter '*.csv' | Select-Object -Expand FullName"
-                        """,
-                        returnStdout: true
-                    ).trim()
-
-                    def csvFiles = csvListRaw.split("\\r?\\n")
-
-                    if (csvFiles.length == 0 || csvFiles[0] == "") {
-                        error "CSV 없음"
+                    if (!fileExists(TEST_FILE_PATH)) {
+                        error "QA_Test.csv 없음"
                     }
 
-                    // =========================
-                    // 전체 데이터
-                    // =========================
-                    def all = []
+                    def content = readFile(TEST_FILE_PATH)
+                    def lines = content.split("\\r?\\n")
 
+                    // =========================
+                    // CSV PARSER
+                    // =========================
                     def parseCsv = { line ->
                         def res = []
                         def sb = new StringBuilder()
@@ -64,36 +56,32 @@ pipeline {
                                 sb.append(c)
                             }
                         }
+
                         res << sb.toString().trim()
                         return res
                     }
 
                     // =========================
-                    // CSV 로딩
+                    // 데이터 파싱
                     // =========================
-                    csvFiles.each { filePath ->
+                    def all = []
 
-                        def content = readFile(filePath)
-                        def lines = content.split("\\r?\\n")
+                    for (int i = 1; i < lines.size(); i++) {
 
-                        for (int i = 1; i < lines.size(); i++) {
+                        def line = lines[i].trim()
+                        if (!line) continue
 
-                            def line = lines[i].trim()
-                            if (!line) continue
+                        def cols = parseCsv(line)
+                        if (cols.size() <= 6) continue
 
-                            def cols = parseCsv(line)
-                            if (cols.size() <= 6) continue
-
-                            all << [
-                                file: filePath.tokenize("\\").last(),
-                                sheet: cols[0],
-                                major: cols[1],
-                                minor: cols[2],
-                                scenario: cols[3],
-                                action: cols[4],
-                                result: cols[6]
-                            ]
-                        }
+                        all << [
+                            sheet: cols[0],
+                            major: cols[1],
+                            minor: cols[2],
+                            scenario: cols[3],
+                            action: cols[4],
+                            result: cols[6]
+                        ]
                     }
 
                     // =========================
@@ -131,14 +119,12 @@ pipeline {
                     def sheetMap = [:]
 
                     all.each {
-                        def key = it.sheet
-
-                        if (!sheetMap[key]) sheetMap[key] = []
-                        sheetMap[key] << it
+                        if (!sheetMap[it.sheet]) sheetMap[it.sheet] = []
+                        sheetMap[it.sheet] << it
                     }
 
                     // =========================
-                    // TC FAIL 비율
+                    // TC FAIL
                     // =========================
                     def tcFail = [:]
 
@@ -160,7 +146,7 @@ pipeline {
                     }
 
                     // =========================
-                    // FAIL 상세
+                    // defects
                     // =========================
                     def defects = all.findAll { it.result == "FAIL" }
 
@@ -173,7 +159,8 @@ pipeline {
                     <h1>QA REPORT</h1>
 
                     <h3>📌 Summary</h3>
-                    <p>Test Files: ${csvFiles.length}</p>
+                    <p>Test File: QA_Test.csv</p>
+                    <p>Build Date: ${new Date().format("yyyy-MM-dd HH:mm:ss")}</p>
 
                     <table border="1">
                     <tr><th>Type</th><th>Count</th><th>Progress</th></tr>
@@ -187,7 +174,7 @@ pipeline {
                     html += "</table><br/>"
 
                     // =========================
-                    // SHEET TABLES
+                    // SHEET TABLE
                     // =========================
                     sheetMap.each { sheet, list ->
 
@@ -245,7 +232,7 @@ pipeline {
                     }
 
                     // =========================
-                    // TC FAIL TABLE
+                    // TC FAIL
                     // =========================
                     html += """
                     <h2>📉 TC FAIL Ratio</h2>
@@ -261,7 +248,7 @@ pipeline {
                     html += "</table>"
 
                     // =========================
-                    // DEFECT TABLE
+                    // DEFECTS
                     // =========================
                     html += """
                     <h2>❌ Defects</h2>
