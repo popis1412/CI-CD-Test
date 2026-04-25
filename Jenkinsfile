@@ -7,7 +7,7 @@ pipeline {
 
     environment {
         WORKSPACE_PATH = "${params.WORKSPACE_PATH}"
-        RESULT_DIR = "${WORKSPACE_PATH}\\Test Results"
+        RESULT_DIR = "${env.WORKSPACE}\\Test Results"
         TEST_FILE_PATH = "${WORKSPACE_PATH}\\Tests\\QA_Test.csv"
         REPORT_FILE = "${RESULT_DIR}\\qa_report.html"
     }
@@ -23,12 +23,12 @@ pipeline {
             }
         }
 
-        stage('QA Analysis (Single CSV)') {
+        stage('QA Analysis') {
             steps {
                 script {
 
                     // =========================
-                    // CSV 존재 확인
+                    // CSV 체크
                     // =========================
                     if (!fileExists(TEST_FILE_PATH)) {
                         error "QA_Test.csv 없음"
@@ -38,7 +38,7 @@ pipeline {
                     def lines = content.split("\\r?\\n")
 
                     // =========================
-                    // CSV PARSER
+                    // CSV PARSER (Excel 대응)
                     // =========================
                     def parseCsv = { line ->
                         def res = []
@@ -62,12 +62,11 @@ pipeline {
                     }
 
                     // =========================
-                    // 데이터 파싱
+                    // 데이터 로딩
                     // =========================
                     def all = []
 
                     for (int i = 1; i < lines.size(); i++) {
-
                         def line = lines[i].trim()
                         if (!line) continue
 
@@ -99,14 +98,19 @@ pipeline {
                         }
                     }
 
-                    all.each {
-                        it.result = norm(it.result)
-                    }
+                    all.each { it.result = norm(it.result) }
 
                     // =========================
-                    // 전체 통계
+                    // 전체 통계 (정확)
                     // =========================
-                    def stats = [Total:0, PASS:0, FAIL:0, BLOCKED:0, "NOT TEST":0, "N/A":0]
+                    def stats = [
+                        Total: 0,
+                        PASS: 0,
+                        FAIL: 0,
+                        BLOCKED: 0,
+                        "NOT TEST": 0,
+                        "N/A": 0
+                    ]
 
                     all.each {
                         stats.Total++
@@ -114,7 +118,7 @@ pipeline {
                     }
 
                     // =========================
-                    // SHEET GROUP
+                    // 시트별 그룹 (엑셀 Sheet 기준)
                     // =========================
                     def sheetMap = [:]
 
@@ -124,7 +128,7 @@ pipeline {
                     }
 
                     // =========================
-                    // TC FAIL
+                    // TC Fail 비율 (시트 기준)
                     // =========================
                     def tcFail = [:]
 
@@ -135,8 +139,8 @@ pipeline {
                             tcFail[key] = [
                                 sheet: it.sheet,
                                 scenario: it.scenario,
-                                total:0,
-                                fail:0
+                                total: 0,
+                                fail: 0
                             ]
                         }
 
@@ -146,7 +150,7 @@ pipeline {
                     }
 
                     // =========================
-                    // defects
+                    // Defect (FAIL만)
                     // =========================
                     def defects = all.findAll { it.result == "FAIL" }
 
@@ -155,26 +159,67 @@ pipeline {
                     // =========================
                     def html = """
                     <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <style>
+                            body { font-family: Arial; padding:20px; }
+
+                            table {
+                                border-collapse: collapse;
+                                width: 100%;
+                                margin-bottom: 30px;
+                            }
+
+                            th {
+                                background: #222;
+                                color: white;
+                                padding: 8px;
+                            }
+
+                            td {
+                                border: 1px solid #ddd;
+                                padding: 6px;
+                                text-align: center;
+                            }
+
+                            tr:nth-child(even) { background: #f5f5f5; }
+
+                            .fail { background: #ffd6d6; }
+                        </style>
+                    </head>
                     <body>
+
                     <h1>QA REPORT</h1>
 
-                    <h3>📌 Summary</h3>
-                    <p>Test File: QA_Test.csv</p>
-                    <p>Build Date: ${new Date().format("yyyy-MM-dd HH:mm:ss")}</p>
+                    <h3>📌 기본 정보</h3>
+                    <p>테스트 파일 : QA_Test.csv</p>
+                    <p>빌드 날짜 : ${new Date().format("yyyy-MM-dd HH:mm:ss")}</p>
 
-                    <table border="1">
-                    <tr><th>Type</th><th>Count</th><th>Progress</th></tr>
+                    <h3>📊 전체 테스트 결과</h3>
+
+                    <table>
+                        <tr>
+                            <th>Type</th>
+                            <th>Count</th>
+                            <th>Progress</th>
+                        </tr>
                     """
 
-                    stats.each { k,v ->
-                        def rate = stats.Total > 0 ? (v*100.0/stats.Total) : 0
-                        html += "<tr><td>${k}</td><td>${v}</td><td>${String.format('%.2f',rate)}%</td></tr>"
+                    stats.each { k, v ->
+                        def rate = stats.Total > 0 ? (v * 100.0 / stats.Total) : 0
+                        html += """
+                        <tr>
+                            <td>${k}</td>
+                            <td>${v}</td>
+                            <td>${String.format('%.2f', rate)}%</td>
+                        </tr>
+                        """
                     }
 
-                    html += "</table><br/>"
+                    html += "</table>"
 
                     // =========================
-                    // SHEET TABLE
+                    // 시트별 결과
                     // =========================
                     sheetMap.each { sheet, list ->
 
@@ -187,25 +232,27 @@ pipeline {
                                 group[key] = [
                                     major: it.major,
                                     minor: it.minor,
-                                    PASS:0,
-                                    FAIL:0,
-                                    BLOCKED:0,
-                                    "NOT TEST":0,
-                                    "N/A":0
+                                    PASS: 0,
+                                    FAIL: 0,
+                                    BLOCKED: 0,
+                                    "NOT TEST": 0,
+                                    "N/A": 0,
+                                    total: 0
                                 ]
                             }
 
                             def g = group[key]
+                            g.total++
                             g[it.result] = (g[it.result] ?: 0) + 1
                         }
 
                         html += """
-                        <h2>📄 Sheet: ${sheet}</h2>
+                        <h2>📄 시트: ${sheet}</h2>
 
-                        <table border="1">
+                        <table>
                         <tr>
-                            <th>Major</th>
-                            <th>Minor</th>
+                            <th>대분류</th>
+                            <th>중분류</th>
                             <th>PASS</th>
                             <th>FAIL</th>
                             <th>BLOCKED</th>
@@ -228,37 +275,55 @@ pipeline {
                             """
                         }
 
-                        html += "</table><br/>"
+                        html += "</table>"
                     }
 
                     // =========================
-                    // TC FAIL
+                    // TC FAIL 비율
                     // =========================
                     html += """
-                    <h2>📉 TC FAIL Ratio</h2>
-                    <table border="1">
-                    <tr><th>Sheet</th><th>Scenario</th><th>Fail %</th></tr>
+                    <h2>📉 TC 실패 비율</h2>
+
+                    <table>
+                    <tr>
+                        <th>시트</th>
+                        <th>TC</th>
+                        <th>Fail %</th>
+                    </tr>
                     """
 
                     tcFail.values().each {
-                        def rate = it.total > 0 ? (it.fail*100.0/it.total) : 0
-                        html += "<tr><td>${it.sheet}</td><td>${it.scenario}</td><td>${String.format('%.1f',rate)}%</td></tr>"
+                        def rate = it.total > 0 ? (it.fail * 100.0 / it.total) : 0
+
+                        html += """
+                        <tr>
+                            <td>${it.sheet}</td>
+                            <td>${it.scenario}</td>
+                            <td>${String.format('%.1f', rate)}%</td>
+                        </tr>
+                        """
                     }
 
                     html += "</table>"
 
                     // =========================
-                    // DEFECTS
+                    // Defect
                     // =========================
                     html += """
-                    <h2>❌ Defects</h2>
-                    <table border="1">
-                    <tr><th>Sheet</th><th>Major</th><th>Minor</th><th>Action</th></tr>
+                    <h2>❌ 결함 목록</h2>
+
+                    <table>
+                    <tr>
+                        <th>시트</th>
+                        <th>대분류</th>
+                        <th>중분류</th>
+                        <th>액션</th>
+                    </tr>
                     """
 
                     defects.each {
                         html += """
-                        <tr>
+                        <tr class="fail">
                             <td>${it.sheet}</td>
                             <td>${it.major}</td>
                             <td>${it.minor}</td>
@@ -279,7 +344,7 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: '**/Test Results/**'
+            archiveArtifacts artifacts: 'Test Results/**'
         }
     }
 }
