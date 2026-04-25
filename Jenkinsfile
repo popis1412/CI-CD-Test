@@ -35,18 +35,15 @@ pipeline {
                         echo "[INFO] POI 라이브러리 없음 → 다운로드 시작"
 
                         bat """
-                        powershell -Command ^
-                        Invoke-WebRequest -Uri https://repo1.maven.org/maven2/org/apache/poi/poi/5.2.5/poi-5.2.5.jar -OutFile "${poiJar}"
+                        powershell -Command Invoke-WebRequest -Uri https://repo1.maven.org/maven2/org/apache/poi/poi/5.2.5/poi-5.2.5.jar -OutFile "${poiJar}"
                         """
 
                         bat """
-                        powershell -Command ^
-                        Invoke-WebRequest -Uri https://repo1.maven.org/maven2/org/apache/poi/poi-ooxml/5.2.5/poi-ooxml-5.2.5.jar -OutFile "${ooxmlJar}"
+                        powershell -Command Invoke-WebRequest -Uri https://repo1.maven.org/maven2/org/apache/poi/poi-ooxml/5.2.5/poi-ooxml-5.2.5.jar -OutFile "${ooxmlJar}"
                         """
 
                         bat """
-                        powershell -Command ^
-                        Invoke-WebRequest -Uri https://repo1.maven.org/maven2/org/apache/xmlbeans/xmlbeans/5.2.1/xmlbeans-5.2.1.jar -OutFile "${xmlbeansJar}"
+                        powershell -Command Invoke-WebRequest -Uri https://repo1.maven.org/maven2/org/apache/xmlbeans/xmlbeans/5.2.1/xmlbeans-5.2.1.jar -OutFile "${xmlbeansJar}"
                         """
 
                         echo "[DONE] POI 다운로드 완료"
@@ -74,35 +71,36 @@ pipeline {
         // 3. EXCEL ANALYSIS (JAVA)
         // =========================
         stage('QA Analysis (Excel)') {
-    steps {
-        script {
+            steps {
+                script {
 
-            if (!fileExists(TEST_FILE)) {
-                error "Excel 파일 없음"
+                    if (!fileExists(TEST_FILE)) {
+                        error "Excel 파일 없음"
+                    }
+
+                    // =========================
+                    // 1. 컴파일 (FIXED)
+                    // =========================
+                    bat """
+                    javac -cp "${LIBS_DIR}/*" "${WORKSPACE_PATH}\\ExcelReader.java"
+                    """
+
+                    // =========================
+                    // 2. 실행 (FIXED)
+                    // =========================
+                    def cmd = """
+                    java -cp "${LIBS_DIR}/*;." ExcelReader "${TEST_FILE}" "${REPORT_FILE}"
+                    """
+
+                    def output = bat(returnStdout: true, script: cmd).trim()
+
+                    echo "========================="
+                    echo output
+                    echo "========================="
+                }
             }
-
-            // =========================
-            // 1. JAVA 컴파일 (핵심 추가)
-            // =========================
-            bat """
-            javac -cp "${LIBS_DIR}/*" ${WORKSPACE_PATH}\\ExcelReader.java
-            """
-
-            // =========================
-            // 2. 실행
-            // =========================
-            def cmd = """
-            java -cp "${LIBS_DIR}/*;${WORKSPACE_PATH}" ExcelReader "${TEST_FILE}" "${REPORT_FILE}"
-            """
-
-            def output = bat(returnStdout: true, script: cmd).trim()
-
-            echo "========================="
-            echo output
-            echo "========================="
         }
     }
-}
 
     post {
         always {
