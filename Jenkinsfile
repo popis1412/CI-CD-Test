@@ -2,12 +2,7 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'BASE_PATH', defaultValue: 'C:\\QA\\CI-CD-Test', description: '결과 저장 경로')
-    }
-
-    environment {
-        RESULT_DIR = "${params.BASE_PATH}\\Test Results"
-        TEST_FILE = "${params.BASE_PATH}\\Tests\\QA_Test.csv"
+        string(name: 'BASE_PATH', defaultValue: '', description: '기본 경로')
     }
 
     stages {
@@ -15,15 +10,14 @@ pipeline {
         stage('Prepare') {
             steps {
                 script {
-                    try {
-                        bat """
-                        if not exist "${env.RESULT_DIR}" (
-                            mkdir "${env.RESULT_DIR}"
-                        )
-                        """
-                    } catch (Exception e) {
-                        error "[ERR-PATH-001] 경로 생성 실패: ${env.RESULT_DIR}"
-                    }
+
+                    def RESULT_DIR = "${params.BASE_PATH}\\Test Results"
+
+                    bat """
+                    if not exist "${RESULT_DIR}" (
+                        mkdir "${RESULT_DIR}"
+                    )
+                    """
                 }
             }
         }
@@ -32,17 +26,22 @@ pipeline {
             steps {
                 script {
 
-                    if (!fileExists(env.TEST_FILE)) {
-                        error "[ERR-FILE-001] 테스트 파일 없음: ${env.TEST_FILE}"
+                    def RESULT_DIR = "${params.BASE_PATH}\\Test Results"
+                    def TEST_FILE = "${params.BASE_PATH}\\Tests\\QA_Test.csv"
+
+                    if (!fileExists(TEST_FILE)) {
+                        error "[ERR-FILE-001] 테스트 파일 없음"
                     }
 
-                    def lines = readFile(env.TEST_FILE).split("\\r?\\n")
+                    def content = readFile(TEST_FILE)
+                    def lines = content.split("\\r?\\n")
 
                     def testResults = []
 
-                    // CSV 구조: 대분류,중분류,시나리오,결과
-                    lines.drop(1).each { line ->
-                        def cols = line.split(",")
+                    // 🔥 Sandbox 안전 loop
+                    for (int i = 1; i < lines.size(); i++) {
+
+                        def cols = lines[i].split(",")
 
                         if (cols.size() >= 4) {
                             testResults << [
@@ -54,7 +53,7 @@ pipeline {
                         }
                     }
 
-                    // 🔥 통계 집계
+                    // 🔥 통계
                     def stats = [:]
 
                     testResults.each { t ->
@@ -71,82 +70,37 @@ pipeline {
                     }
 
                     // 🔥 HTML 생성
-                    def html = """
-                    <html>
-                    <head>
-                    <meta charset="UTF-8">
-                    <style>
-                        body { font-family: Arial; padding:20px; }
-                        table { border-collapse: collapse; width:100%; }
-                        th, td { border:1px solid #ccc; padding:10px; text-align:center; }
-                        th { background:#eee; }
-                        .fail { color:red; }
-                        .pass { color:green; }
-                    </style>
-                    </head>
-                    <body>
+                    def html = "<html><body>"
+                    html += "<h1>QA 정량 분석 리포트</h1>"
+                    html += "<p>경로: ${RESULT_DIR}</p>"
+                    html += "<p>시간: ${new Date()}</p>"
 
-                    <h1>QA 정량 분석 리포트</h1>
-                    <p>경로: ${env.RESULT_DIR}</p>
-                    <p>파일: ${env.TEST_FILE}</p>
-                    <p>시간: ${new Date()}</p>
-
-                    <h2>📊 분류별 테스트 결과</h2>
-                    <table>
-                        <tr>
-                            <th>대분류</th>
-                            <th>중분류</th>
-                            <th>총 TC</th>
-                            <th>PASS</th>
-                            <th>FAIL</th>
-                            <th>실패율</th>
-                        </tr>
-                    """
+                    html += "<table border='1'><tr><th>대분류</th><th>중분류</th><th>Total</th><th>Pass</th><th>Fail</th></tr>"
 
                     stats.each { major, minors ->
                         minors.each { minor, s ->
-                            def failRate = s.total > 0 ? (s.fail * 100 / s.total).toInteger() : 0
-
-                            html += """
-                            <tr>
-                                <td>${major}</td>
-                                <td>${minor}</td>
-                                <td>${s.total}</td>
-                                <td class='pass'>${s.pass}</td>
-                                <td class='fail'>${s.fail}</td>
-                                <td>${failRate}%</td>
-                            </tr>
-                            """
+                            html += "<tr><td>${major}</td><td>${minor}</td><td>${s.total}</td><td>${s.pass}</td><td>${s.fail}</td></tr>"
                         }
                     }
 
                     html += "</table>"
 
-                    // 🔥 실패 상세 (경로 포함)
+                    // 🔥 실패 상세
                     def fails = testResults.findAll { it.result == "FAIL" }
 
-                    html += """
-                    <h2>⚠️ 실패 상세</h2>
-                    <ul>
-                    """
-
-                    def slackMsg = "❌ QA 실패 (${fails.size()}건)\n\n"
+                    html += "<h2>실패 상세</h2><ul>"
 
                     fails.each {
                         def path = "${it.major} > ${it.minor} > ${it.scenario}"
-                        html += "<li>${path} → 실패</li>"
-                        slackMsg += "- ${path}\n"
+                        html += "<li>${path}</li>"
                     }
 
                     html += "</ul></body></html>"
 
-                    writeFile file: "${env.RESULT_DIR}\\QA_Report.html", text: html, encoding: 'UTF-8'
+                    writeFile file: "${RESULT_DIR}\\QA_Report.html", text: html
 
-                    if(fails.size() > 0) {
-                        env.SLACK_MSG = slackMsg
+                    if (fails.size() > 0) {
                         error "[ERR-QA-002] QA 실패 (${fails.size()}건)"
-                    } else {
-                        env.SLACK_MSG = "✅ QA 성공\n결과 경로: ${env.RESULT_DIR}"
                     }
                 }
             }
@@ -155,26 +109,28 @@ pipeline {
 
     post {
         always {
-            publishHTML(target: [
-                reportDir: "${env.RESULT_DIR}",
-                reportFiles: 'QA_Report.html',
-                reportName: 'QA Report'
-            ])
+            script {
+                def RESULT_DIR = "${params.BASE_PATH}\\Test Results"
+
+                publishHTML(target: [
+                    reportDir: RESULT_DIR,
+                    reportFiles: 'QA_Report.html',
+                    reportName: 'QA Report'
+                ])
+            }
         }
 
         success {
             slackSend(
                 channel: "#새-채널",
-                color: '#00FF00',
-                message: env.SLACK_MSG
+                message: "✅ QA 성공"
             )
         }
 
         failure {
             slackSend(
                 channel: "#새-채널",
-                color: '#FF0000',
-                message: env.SLACK_MSG
+                message: "❌ QA 실패"
             )
         }
     }
