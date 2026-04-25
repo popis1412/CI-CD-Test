@@ -1,119 +1,147 @@
 pipeline {
     agent any
 
+    environment {
+        // GitHub 인증 정보 ID (젠킨스 Credentials에 등록된 ID)
+        // 만약 ID가 다르다면 아래 'github-credentials-id'를 실제 ID로 수정하세요.
+        GIT_CRED = 'github-credentials-id' 
+        REPO_URL = 'https://github.com/popis1412/CI-CD-Test.git'
+    }
+
     stages {
         stage('Prepare') {
             steps {
-                echo '이전 리포트 정리 및 폴더 생성...'
-                // 윈도우 환경에 맞춰 경로 수정 및 폴더 비우기
+                echo '기존 Test Results 폴더 정리...'
+                // 윈도우 환경에서 공백이 있는 폴더 생성 및 정리
                 bat '''
-                if not exist reports mkdir reports
-                del /q reports\\*
+                if not exist "Test Results" mkdir "Test Results"
+                del /q "Test Results"\\*
                 '''
             }
         }
 
-        stage('Generate Tag Battle QA Report') {
+        stage('QA Analysis & Create Report') {
             steps {
-                echo '태그 전투 시스템 QA 리포트 생성 중...'
-                
                 script {
-                    // 1. 데이터 설정 (정량적 지표 계산)
-                    def f_total = 5, f_pass = 4, f_fail = 1, f_defect = 1
-                    def c_total = 3, c_pass = 3, c_fail = 0, c_defect = 0
-                    def e_total = 3, e_pass = 2, e_fail = 1, e_defect = 2
-                    def u_total = 3, u_pass = 3, u_fail = 0, u_defect = 0
+                    def startTime = System.currentTimeMillis()
+                    def startDateTime = new Date().format('yyyy-MM-dd HH:mm:ss')
+                    
+                    // 데이터 시뮬레이션 (100개)
+                    def testResults = []
+                    for(int i=1; i<=100; i++) {
+                        def category = (i <= 30) ? "기능: 캐릭터 교체" : (i <= 60) ? "전투: 스킬 연계" : "기타: 시스템"
+                        def result = "Pass"
+                        def errorCode = ""
+                        
+                        if(i == 15) { result = "Fail"; errorCode = "[ERROR 101] 네트워크 연결이 끊겼습니다." }
+                        if(i == 55) { result = "Fail"; errorCode = "[ERROR 404] 리소스 참조 오류" }
+                        if(i > 95) result = "Not Test"
 
-                    // 실패율 계산 로직
-                    def calculateFailRate = { fail, total -> 
-                        return total > 0 ? String.format("%.1f", (fail / total) * 100) : "0"
+                        testResults << [row: i + 1, col: "H", category: category, result: result, error: errorCode]
                     }
 
-                    // 2. HTML 내용 작성 (특수문자 에러 방지를 위해 변수에 담기)
+                    // 요약 데이터 계산
+                    def summaryMap = [:]
+                    testResults.each { item ->
+                        if(!summaryMap[item.category]) summaryMap[item.category] = [total:0, pass:0, fail:0, notTest:0]
+                        summaryMap[item.category].total++
+                        if(item.result == "Pass") summaryMap[item.category].pass++
+                        else if(item.result == "Fail") summaryMap[item.category].fail++
+                        else summaryMap[item.category].notTest++
+                    }
+
+                    def duration = "${(System.currentTimeMillis() - startTime) / 1000}초"
+
+                    // HTML 리포트 내용 작성
                     def htmlContent = """
+                    <!DOCTYPE html>
                     <html>
                     <head>
                         <meta charset="UTF-8">
                         <style>
-                            body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; line-height: 1.6; background: #f4f7f6; }
-                            .header { background: #2c3e50; color: white; padding: 20px; margin-bottom: 20px; border-radius: 5px; text-align: center; }
-                            .summary-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-                            .summary-table th, .summary-table td { border: 1px solid #ddd; padding: 12px; text-align: center; }
-                            .summary-table th { background: #ecf0f1; font-weight: bold; }
-                            .status-pass { color: #27ae60; font-weight: bold; }
-                            .status-fail { color: #e74c3c; font-weight: bold; }
-                            .card { background: white; border-radius: 5px; padding: 15px; margin-bottom: 15px; border-left: 5px solid #3498db; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-                            .priority-critical { background: #ffeded; color: #c0392b; padding: 2px 6px; border-radius: 3px; font-size: 0.8em; font-weight: bold; }
+                            body { font-family: 'Malgun Gothic', sans-serif; padding: 30px; background: #f4f6f8; }
+                            .container { background: white; padding: 40px; border-radius: 10px; border: 1px solid #d1d5da; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+                            h1 { border-bottom: 3px solid #24292e; padding-bottom: 10px; text-align: center; }
+                            .info-table, .data-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                            .info-table td { padding: 8px; border: 1px solid #eee; }
+                            .info-label { background: #f6f8fa; font-weight: bold; width: 20%; }
+                            .data-table th, .data-table td { border: 1px solid #dfe2e5; padding: 12px; text-align: center; }
+                            .data-table th { background: #f6f8fa; }
+                            .status-pass { color: #28a745; font-weight: bold; }
+                            .status-fail { color: #d73a49; font-weight: bold; }
+                            .location-tag { background: #fffbdd; padding: 2px 5px; border-radius: 3px; font-size: 0.9em; border: 1px solid #fff5b1; }
                         </style>
                     </head>
                     <body>
-                        <div class="header">
-                            <h1>태그 전투 시스템 QA 분석 리포트</h1>
-                            <p>실행 일시: ${new Date().format('yyyy-MM-dd HH:mm:ss')}</p>
-                        </div>
+                        <div class="container">
+                            <h1>일곱개의 대죄 : 오리진 태그 전투 시스템 QA 분석 리포트</h1>
+                            <table class="info-table">
+                                <tr><td class="info-label">테스트 게임</td><td>일곱개의 대죄 오리진 (7DS Origin)</td></tr>
+                                <tr><td class="info-label">실행 일시</td><td>${startDateTime}</td></tr>
+                                <tr><td class="info-label">소요 시간</td><td>${duration}</td></tr>
+                            </table>
 
-                        <h2>1. 테스트 결과 요약 (정량 지표)</h2>
-                        <table class="summary-table">
-                            <tr><th>대분류</th><th>시나리오 수</th><th>성공</th><th>실패</th><th>실패율(%)</th><th>발견 결함</th></tr>
-                            <tr><td>1. 기능 테스트</td><td>${f_total}</td><td>${f_pass}</td><td class="status-fail">${f_fail}</td><td>${calculateFailRate(f_fail, f_total)}%</td><td>${f_defect}</td></tr>
-                            <tr><td>2. 전투 연계 테스트</td><td>${c_total}</td><td>${c_pass}</td><td>${c_fail}</td><td>${calculateFailRate(c_fail, c_total)}%</td><td>${c_defect}</td></tr>
-                            <tr><td>3. 예외 상황 테스트</td><td>${e_total}</td><td>${e_pass}</td><td class="status-fail">${e_fail}</td><td>${calculateFailRate(e_fail, e_total)}%</td><td>${e_defect}</td></tr>
-                            <tr><td>4. UX / 피드백 테스트</td><td>${u_total}</td><td>${u_pass}</td><td>${u_fail}</td><td>${calculateFailRate(u_fail, u_total)}%</td><td>${u_defect}</td></tr>
-                        </table>
-
-                        <h2>2. 상세 실패 시나리오 및 결함</h2>
-                        <div class="card">
-                            <span class="priority-critical">1순위 (Critical)</span>
-                            <h3>[기능] 캐릭터 상태(넉백, 피격 등)에 따른 교체 가능 여부 확인</h3>
-                            <p>결과: <span class="status-fail">FAILED</span> (피격 애니메이션 중 교체 입력 무시 현상 발생)</p>
-                            <p>관련 결함: [BUG-1021] 피격 상태 프레임 태그 인터럽트 불가</p>
-                        </div>
-                        <div class="card">
-                            <h3>[예외] 스킬 사용 중 교체 시 충돌 여부</h3>
-                            <p>결과: <span class="status-fail">FAILED</span> (특정 광역기 사용 중 교체 시 캐릭터 증발)</p>
-                            <p>관련 결함: [BUG-1025] 스킬 리소스 해제 전 캐릭터 스왑 시 널 참조 에러</p>
-                        </div>
-
-                        <h2>3. 테스트 환경</h2>
-                        <ul><li>AOS: 갤럭시 S20</li><li>iOS: iPhone 12 Pro</li><li>PC: i5 / 16GB</li></ul>
-                    </body>
-                    </html>
+                            <h2>📊 분류별 결과 요약</h2>
+                            <table class="data-table">
+                                <thead><tr><th>대분류</th><th>전체</th><th>Pass</th><th>Fail</th><th>Not Test</th></tr></thead>
+                                <tbody>
                     """
+                    summaryMap.each { cat, d ->
+                        htmlContent += "<tr><td>${cat}</td><td>${d.total}</td><td class='status-pass'>${d.pass}</td><td class='${d.fail>0?'status-fail':''}'>${d.fail}</td><td>${d.notTest}</td></tr>"
+                    }
+                    htmlContent += "</tbody></table>"
 
-                    // 3. 파일 생성 (Groovy writeFile 사용으로 에러 방지)
-                    writeFile file: 'reports/Tag_Battle_QA_Report.html', text: htmlContent, encoding: 'UTF-8'
+                    htmlContent += "<h2>⚠️ 실패 항목 상세 리스트</h2>"
+                    def failItems = testResults.findAll { it.result == "Fail" }
+                    if(failItems.size() > 0) {
+                        htmlContent += "<table class='data-table'><thead><tr><th>위치</th><th>분류</th><th>에러 메시지</th></tr></thead><tbody>"
+                        failItems.each { item ->
+                            htmlContent += "<tr><td><span class='location-tag'>${item.row}행 / ${item.col}열</span></td><td>${item.category}</td><td style='text-align:left; color:#d73a49;'>${item.error}</td></tr>"
+                        }
+                        htmlContent += "</tbody></table>"
+                    } else {
+                        htmlContent += "<p>발견된 에러가 없습니다.</p>"
+                    }
+
+                    htmlContent += "</div></body></html>"
+
+                    // 파일 저장 경로 변경: "Test Results" 폴더 안으로
+                    writeFile file: 'Test Results/7DS_QA_Report.html', text: htmlContent, encoding: 'UTF-8'
                 }
+            }
+        }
+
+        stage('Push to GitHub') {
+            steps {
+                echo 'GitHub의 Test Results 폴더에 리포트 업로드 중...'
+                // 깃 허브에 변경사항 저장
+                bat '''
+                git add "Test Results/7DS_QA_Report.html"
+                git commit -m "QA Report 자동 업데이트: %DATE% %TIME%"
+                git push origin master
+                '''
             }
         }
     }
 
     post {
         always {
-            // 아카이빙 및 리포트 게시
-            archiveArtifacts artifacts: 'reports/*', allowEmptyArchive: true
+            // 젠킨스 대시보드에서도 볼 수 있게 게시
             publishHTML(target: [
-                reportDir: 'reports',
-                reportFiles: 'Tag_Battle_QA_Report.html',
-                reportName: 'Tag Battle QA Analysis Report',
+                reportDir: 'Test Results',
+                reportFiles: '7DS_QA_Report.html',
+                reportName: '7DS Origin QA Analysis Report',
                 keepAll: true,
                 alwaysLinkToLastBuild: true
             ])
+            archiveArtifacts artifacts: 'Test Results/*', allowEmptyArchive: true
         }
         
         success {
-            // 슬랙 알림 (기존 설정 유지하되 메시지 정리)
             slackSend (
                 channel: '#qa-alert', 
                 color: '#00FF00', 
-                message: "✅ 태그 전투 시스템 테스트 완료\n성공률: 85%\n리포트 확인: ${env.BUILD_URL}Tag_20Battle_20QA_20Analysis_20Report/"
-            )
-        }
-        
-        failure {
-            slackSend (
-                channel: '#qa-alert', 
-                color: '#FF0000', 
-                message: "❌ 테스트 빌드 실패! 로그를 확인하세요: ${env.BUILD_URL}"
+                message: "✅ [7DS Origin] 테스트 완료 및 GitHub 업로드 성공\n경로: /Test Results/7DS_QA_Report.html\n리포트: ${env.BUILD_URL}7DS_20Origin_20QA_20Analysis_20Report/"
             )
         }
     }
