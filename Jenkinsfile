@@ -28,16 +28,16 @@ pipeline {
                 script {
 
                     if (!fileExists(TEST_FILE_PATH)) {
-                        error "CSV 없음"
+                        error "CSV 없음: ${TEST_FILE_PATH}"
                     }
 
                     def content = readFile(TEST_FILE_PATH)
                     def lines = content.split("\\r?\\n")
 
                     // ======================
-                    // CSV SAFE PARSER
+                    // SAFE CSV PARSER (Excel 대응)
                     // ======================
-                    def parseCsvLine = { line ->
+                    def parseCsv = { line ->
                         def result = []
                         def sb = new StringBuilder()
                         boolean inQuotes = false
@@ -45,12 +45,14 @@ pipeline {
                         for (int i = 0; i < line.length(); i++) {
                             char c = line.charAt(i)
 
-                            if (c == '"') inQuotes = !inQuotes
-                            else if (c == ',' && !inQuotes) {
+                            if (c == '"') {
+                                inQuotes = !inQuotes
+                            } else if (c == ',' && !inQuotes) {
                                 result << sb.toString().trim()
                                 sb.setLength(0)
+                            } else {
+                                sb.append(c)
                             }
-                            else sb.append(c)
                         }
                         result << sb.toString().trim()
                         return result
@@ -59,15 +61,14 @@ pipeline {
                     def testResults = []
 
                     // ======================
-                    // G열 기준 파싱
+                    // CSV 파싱 (G열 = index 6)
                     // ======================
                     for (int i = 1; i < lines.size(); i++) {
 
                         def line = lines[i].trim()
                         if (!line) continue
 
-                        def cols = parseCsvLine(line)
-
+                        def cols = parseCsv(line)
                         if (cols.size() <= 6) continue
 
                         testResults << [
@@ -80,10 +81,11 @@ pipeline {
                     }
 
                     // ======================
-                    // NORMALIZE
+                    // Normalize
                     // ======================
                     def normalize = { r ->
                         if (!r) return "NOT TEST"
+
                         switch(r.trim().toUpperCase()) {
                             case "PASS": return "PASS"
                             case "FAIL": return "FAIL"
@@ -99,10 +101,10 @@ pipeline {
                     }
 
                     // ======================
-                    // STATS
+                    // 전체 통계
                     // ======================
                     def stats = [
-                        Total: 0,
+                        TOTAL: 0,
                         PASS: 0,
                         FAIL: 0,
                         BLOCKED: 0,
@@ -111,12 +113,12 @@ pipeline {
                     ]
 
                     testResults.each {
-                        stats.Total++
+                        stats.TOTAL++
                         stats[it.result] = (stats[it.result] ?: 0) + 1
                     }
 
                     // ======================
-                    // ① 대/중분류 통계
+                    // 1) 대분류 / 중분류 정량
                     // ======================
                     def groupMap = [:]
 
@@ -140,7 +142,7 @@ pipeline {
                     }
 
                     // ======================
-                    // ② FAIL 시나리오별 비율
+                    // 2) TC별 Fail 비율
                     // ======================
                     def failByScenario = [:]
 
@@ -150,21 +152,20 @@ pipeline {
                         }
                     }
 
-                    // 전체 대비 비율
                     def failScenarioTable = failByScenario.collect { k, v ->
                         [
                             scenario: k,
-                            rate: stats.FAIL > 0 ? (v * 100.0 / stats.FAIL) : 0
+                            rate: stats.TOTAL > 0 ? (v * 100.0 / stats.TOTAL) : 0
                         ]
                     }
 
                     // ======================
-                    // ③ 결함 상세 (원본 유지)
+                    // 3) Fail 상세
                     // ======================
                     def defects = testResults.findAll { it.result == "FAIL" }
 
                     // ======================
-                    // HTML REPORT
+                    // HTML
                     // ======================
                     def html = """
                     <html>
@@ -174,19 +175,19 @@ pipeline {
                             body { font-family: Arial; padding:20px; }
                             table { border-collapse: collapse; width:100%; margin-bottom:30px; }
                             th, td { border:1px solid #ddd; padding:8px; text-align:center; }
-                            th { background:#333; color:white; }
-                            .fail { background:#ffdddd; }
+                            th { background:#222; color:white; }
+                            .fail { background:#ffe5e5; }
                         </style>
                     </head>
                     <body>
 
                     <h2>${PROJECT_NAME} QA REPORT</h2>
 
-                    <h3>📊 대/중분류 테스트 현황</h3>
+                    <h3>📊 대분류 / 중분류 테스트 현황</h3>
                     <table>
                         <tr>
-                            <th>Major</th>
-                            <th>Minor</th>
+                            <th>대분류</th>
+                            <th>중분류</th>
                             <th>Total</th>
                             <th>Pass</th>
                             <th>Fail</th>
@@ -212,7 +213,7 @@ pipeline {
                     html += """
                     </table>
 
-                    <h3>📉 분류별 실패 시나리오 비율</h3>
+                    <h3>📉 TC별 실패 시나리오 비율</h3>
                     <table>
                         <tr>
                             <th>TC 이름</th>
@@ -232,7 +233,7 @@ pipeline {
                     html += """
                     </table>
 
-                    <h3>❌ 분류별 발견된 결함</h3>
+                    <h3>❌ 발견된 결함 (Fail 기준)</h3>
                     <table>
                         <tr>
                             <th>No</th>
@@ -264,27 +265,25 @@ pipeline {
                     writeFile file: "${RESULT_DIR}\\qa_report.html", text: html
 
                     // ======================
-                    // Slack 메시지
+                    // Slack Message (항상 성공 빌드)
                     // ======================
-                    def slackMessage = ""
+                    def slackMsg = ""
 
                     if (defects.size() > 0) {
-                        slackMessage = """❌ QA 완료 (FAIL ${defects.size()}건)
-
-"""
+                        slackMsg = "❌ QA 완료 (FAIL: ${defects.size()}건)\n"
                         failScenarioTable.each {
-                            slackMessage += "• ${it.scenario} (${String.format('%.1f', it.rate)}%)\n"
+                            slackMsg += "- ${it.scenario}: ${String.format('%.1f', it.rate)}%\n"
                         }
                     } else {
-                        slackMessage = "✅ QA 완료 - ALL PASS"
+                        slackMsg = "✅ QA 완료 - ALL PASS"
                     }
 
                     currentBuild.result = 'SUCCESS'
-                    currentBuild.description = "TOTAL=${stats.Total}, FAIL=${stats.FAIL}"
-                    env.SLACK_MSG = slackMessage
+                    currentBuild.description = "TOTAL=${stats.TOTAL}, FAIL=${stats.FAIL}"
+                    env.SLACK_MSG = slackMsg
 
-                    echo "[INFO] TOTAL: ${stats.Total}"
-                    echo "[INFO] FAIL: ${stats.FAIL}"
+                    echo "[INFO] TOTAL=${stats.TOTAL}"
+                    echo "[INFO] FAIL=${stats.FAIL}"
                 }
             }
         }
