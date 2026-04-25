@@ -122,11 +122,12 @@ pipeline {
         }
 
         failure {
-            slackSend (
-                channel: '#qa-alert',
-                color: '#FF0000',
-                message: env.SLACK_FAIL_MSG ?: "❌ [ERR-UNKNOWN-999] 알 수 없는 오류 발생"
-            )
-        }
+    script {
+        def msg = env.SLACK_FAIL_MSG ?: "❌ [ERR-UNKNOWN-999] 오류 발생"
+
+        slackSend (
+            webhookUrl: 'https://hooks.slack.com/services/XXXXX/XXXXX/XXXXX',
+            message: msg
+        )
     }
 }
