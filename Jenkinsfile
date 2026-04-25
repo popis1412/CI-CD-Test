@@ -10,14 +10,14 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'WORKSPACE_PATH', defaultValue: 'C:\\QA\\CI-CD-Test', description: 'Jenkins workspace path (e.g., C:\\QA\\CI-CD-Test)')
+        string(name: 'WORKSPACE_PATH', defaultValue: '', description: 'Jenkins workspace path (e.g., C:\\파일 경로)')
     }
 
     environment {
         PROJECT_NAME = "7DS Origin QA"
         WORKSPACE_PATH = "${params.WORKSPACE_PATH}"
         RESULT_DIR = "${params.WORKSPACE_PATH}\\Test Results"
-        TEST_FILE_PATH = "${params.WORKSPACE_PATH}\\Tests\QA_Test.csv"
+        TEST_FILE_PATH = "${params.WORKSPACE_PATH}\\Tests\\QA_Test.csv"
     }
 
     stages {
