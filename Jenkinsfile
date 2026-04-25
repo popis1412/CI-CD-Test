@@ -6,62 +6,56 @@ pipeline {
     }
 
     stages {
-        stage('QA 결과 분석 (Python)') {
+        stage('QA 결과 분석 (Python 신규 설치)') {
             steps {
                 script {
                     def basePath = params.BASE_PATH
+                    // 1. 우리가 목표로 하는 절대 경로 정의 (가장 찾기 쉬운 경로)
+                    def PYTHON_HOME = "C:\\Python312"
+                    def PYTHON_EXE = "${PYTHON_HOME}\\python.exe"
                     
                     bat """
                     @echo off
                     chcp 65001 >nul
                     
                     echo =========================================
-                    echo 1. Python 설치 여부 확인 및 자동 설치
+                    echo 1. Python 파일 존재 확인 및 winget 설치
                     echo =========================================
                     
-                    :: 방법 1: 현재 PATH에서 확인
-                    python --version >nul 2>&1
-                    IF %ERRORLEVEL% EQU 0 (
-                        echo [확인] 파이썬이 이미 있습니다. (PATH 인식)
-                        GOTO PYTHON_READY
+                    :: 파일이 진짜로 없는지 체크
+                    if exist "${PYTHON_EXE}" (
+                        echo [로그] 파이썬 파일이 이미 존재합니다.
+                        goto PYTHON_READY
                     )
 
-                    :: 방법 2: 윈도우 표준 설치 경로에 파일이 직접 존재하는지 확인
-                    IF EXIST "C:\\Program Files\\Python312\\python.exe" (
-                        echo [확인] 파이썬이 이미 있습니다. (C:\\Program Files)
-                        set "PATH=%PATH%;C:\\Program Files\\Python312\\;C:\\Program Files\\Python312\\Scripts\\"
-                        GOTO PYTHON_READY
-                    )
+                    echo [알림] python.exe 파일이 없습니다. winget으로 설치를 시작합니다.
                     
-                    :: 위 방법들로 확인이 안 되면 설치 진행 (winget 사용)
-                    echo [알림] 파이썬을 찾을 수 없습니다. winget을 통해 설치를 시도합니다.
+                    :: winget으로 설치 (정확한 ID 사용)
+                    :: --location: 설치 경로를 우리가 원하는 곳으로 강제 지정
+                    :: --silent: 백그라운드에서 조용히 설치
+                    winget install --id Python.Python.3.12 -e --silent --accept-source-agreements --accept-package-agreements --location "${PYTHON_HOME}"
                     
-                    :: winget은 최신 윈도우에 내장된 패키지 매니저입니다.
-                    :: --exact: 정확한 이름 찾기, --silent: 조용히 설치
-                    winget install --id Python.Python.3.12 --exact --silent --accept-source-agreements --accept-package-agreements
-                    
-                    IF %ERRORLEVEL% NEQ 0 (
-                        echo [에러] winget 설치에 실패했습니다. 수동 설치가 필요할 수 있습니다.
+                    :: 설치 직후 파일이 생겼는지 최종 확인
+                    if not exist "${PYTHON_EXE}" (
+                        echo [에러] winget 설치 후에도 "${PYTHON_EXE}" 파일을 찾을 수 없습니다.
                         exit /b 1
                     )
-
-                    echo [완료] Python 설치가 끝났습니다. 세션을 업데이트합니다.
-                    :: 설치 직후에는 PATH가 바로 반영 안 될 수 있으므로 수동으로 추가
-                    set "PATH=%PATH%;C:\\Program Files\\Python312\\;C:\\Program Files\\Python312\\Scripts\\"
+                    
+                    echo [완료] 파이썬 파일이 생성되었습니다!
 
                     :PYTHON_READY
-                    echo [로그] 다음 단계를 진행합니다.
-
                     echo =========================================
                     echo 2. 라이브러리(openpyxl) 세팅
                     echo =========================================
-                    python -m pip install --upgrade pip >nul 2>&1
-                    python -c "import openpyxl" 2>nul || python -m pip install openpyxl
+                    :: 환경 변수를 믿지 않고, 방금 확인한 절대 경로의 python.exe를 직접 호출합니다.
+                    "${PYTHON_EXE}" -m pip install --upgrade pip >nul 2>&1
+                    "${PYTHON_EXE}" -m pip install openpyxl
                     
                     echo =========================================
-                    echo 3. 파이썬 스크립트 실행
+                    echo 3. 정량적 리포트 생성 스크립트 실행
                     echo =========================================
-                    python make_report.py "${basePath}"
+                    :: 스크립트 실행 시에도 반드시 절대 경로를 사용합니다.
+                    "${PYTHON_EXE}" make_report.py "${basePath}"
                     """
                 }
             }
