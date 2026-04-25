@@ -1,27 +1,19 @@
-/*
-================================================================================
-JENKINSFILE - 단순 파라미터 버전 (WORKSPACE_PATH만 사용)
-파일명: Jenkinsfile
-위치: Git 저장소 루트
-================================================================================
-*/
-
 pipeline {
     agent any
-
+ 
     parameters {
         string(name: 'WORKSPACE_PATH', defaultValue: '', description: 'Jenkins workspace path (e.g., C:\\파일 경로)')
     }
-
+ 
     environment {
         PROJECT_NAME = "7DS Origin QA"
         WORKSPACE_PATH = "${params.WORKSPACE_PATH}"
         RESULT_DIR = "${params.WORKSPACE_PATH}\\Test Results"
         TEST_FILE_PATH = "${params.WORKSPACE_PATH}\\Tests\\QA_Test.csv"
     }
-
+ 
     stages {
-
+ 
         stage('Prepare') {
             steps {
                 script {
@@ -36,28 +28,28 @@ pipeline {
                 }
             }
         }
-
+ 
         stage('QA Analysis') {
             steps {
                 script {
-
+ 
                     def WORK_DIR = env.WORKSPACE_PATH
                     def RESULT_DIR = env.RESULT_DIR
                     def TEST_FILE = env.TEST_FILE_PATH
-
+ 
                     echo "[INFO] WORKSPACE: ${WORK_DIR}"
                     echo "[INFO] RESULT DIR: ${RESULT_DIR}"
-                    echo "[INFO] TEST FILE: ${TEST_FILE }"
-
+                    echo "[INFO] TEST FILE: ${TEST_FILE}"
+ 
                     if (!fileExists(TEST_FILE)) {
                         error "[ERR-FILE-001] 테스트 파일 없음: ${TEST_FILE}"
                     }
-
+ 
                     def content = readFile(TEST_FILE)
                     def lines = content.split("\r?\n")
-
+ 
                     def testResults = []
-
+ 
                     // ======================
                     // CSV PARSE
                     // ======================
@@ -65,7 +57,7 @@ pipeline {
                         if (lines[i].trim().isEmpty()) continue
                         
                         def cols = lines[i].split(",")
-
+ 
                         if (cols.size() >= 4) {
                             testResults << [
                                 major: cols[0]?.trim() ?: "",
@@ -75,28 +67,28 @@ pipeline {
                             ]
                         }
                     }
-
+ 
                     // ======================
                     // 상태 정규화
                     // ======================
                     def normalize = { r ->
                         if (r == null || r.isEmpty()) return "Not Test"
                         def v = r.trim().toLowerCase()
-
+ 
                         if (v == "pass") return "Pass"
                         if (v == "fail") return "Fail"
                         if (v == "blocked") return "Blocked"
                         if (v == "n/a" || v == "na") return "N/A"
                         return "Not Test"
                     }
-
+ 
                     // ======================
                     // 상태 정규화 적용
                     // ======================
                     testResults.each { t ->
                         t.result = normalize(t.result)
                     }
-
+ 
                     // ======================
                     // 전체 통계
                     // ======================
@@ -108,14 +100,14 @@ pipeline {
                         "Not Test": 0,
                         "N/A": 0
                     ]
-
+ 
                     testResults.each { t ->
                         stats[t.result] = (stats[t.result] ?: 0) + 1
                     }
-
+ 
                     def failRate = stats["Total"] > 0 ?
                             (stats["Fail"] * 100.0 / stats["Total"]) : 0
-
+ 
                     // ======================
                     // 대/중분류별 분류 데이터
                     // ======================
@@ -147,7 +139,7 @@ pipeline {
                         }
                         cls.scenarios[t.scenario][t.result] = (cls.scenarios[t.scenario][t.result] ?: 0) + 1
                     }
-
+ 
                     // ======================
                     // 대분류별 분류 데이터
                     // ======================
@@ -159,7 +151,7 @@ pipeline {
                         }
                         majorMap[v.major][v.minor] = v
                     }
-
+ 
                     // ======================
                     // Fail 리스트
                     // ======================
@@ -175,7 +167,16 @@ pipeline {
                         }
                         failsByMajor[f.major] << f
                     }
-
+ 
+                    // ======================
+                    // 통계 정보를 파일에 저장 (post 섹션에서 사용하기 위해)
+                    // ======================
+                    def statsInfo = """Total=${stats["Total"]}
+Pass=${stats["Pass"]}
+Fail=${stats["Fail"]}
+FailRate=${String.format("%.2f", failRate)}"""
+                    writeFile file: "${RESULT_DIR}\\stats.txt", text: statsInfo
+ 
                     // ======================
                     // HTML 생성
                     // ======================
@@ -517,7 +518,7 @@ pipeline {
                     대/중분류별 테스트 현황
                 </div>
                 """
-
+ 
                     majorMap.keySet().sort().each { major ->
                         html += """
                 <div class="classification-section">
@@ -536,7 +537,7 @@ pipeline {
                         </thead>
                         <tbody>
                         """
-
+ 
                         majorMap[major].keySet().sort().each { minor ->
                             def v = majorMap[major][minor]
                             def total = v.Total ?: 1
@@ -560,11 +561,11 @@ pipeline {
                 </div>
                         """
                     }
-
+ 
                     html += """
             </div>
             """
-
+ 
                     // 섹션 3: 분류별 실패한 시나리오 비율
                     html += """
             <div class="section">
@@ -573,7 +574,7 @@ pipeline {
                     분류별 실패한 시나리오
                 </div>
                 """
-
+ 
                     def hasFailures = false
                     majorMap.keySet().sort().each { major ->
                         def majorFailures = failsByMajor[major] ?: []
@@ -610,15 +611,15 @@ pipeline {
                             """
                         }
                     }
-
+ 
                     if (!hasFailures) {
                         html += "<div class='no-data'>실패한 시나리오가 없습니다.</div>"
                     }
-
+ 
                     html += """
             </div>
             """
-
+ 
                     // 섹션 4: 분류별 발견된 결함 상세
                     html += """
             <div class="section">
@@ -627,7 +628,7 @@ pipeline {
                     분류별 발견된 결함 상세 정보
                 </div>
                 """
-
+ 
                     def hasDefects = false
                     majorMap.keySet().sort().each { major ->
                         def majorDefects = failsByMajor[major] ?: []
@@ -684,11 +685,11 @@ pipeline {
                             """
                         }
                     }
-
+ 
                     if (!hasDefects) {
                         html += "<div class='no-data'>발견된 결함이 없습니다.</div>"
                     }
-
+ 
                     html += """
             </div>
         </div>
@@ -696,35 +697,42 @@ pipeline {
 </body>
 </html>
                     """
-
+ 
                     writeFile file: "${RESULT_DIR}\\QA_Report.html", text: html
-
+ 
                     println "[INFO] HTML Report generated: ${RESULT_DIR}\\QA_Report.html"
                     println "[INFO] Total Tests: ${stats["Total"]}"
                     println "[INFO] Passed: ${stats["Pass"]}"
                     println "[INFO] Failed: ${stats["Fail"]}"
                     println "[INFO] Fail Rate: ${String.format("%.2f%%", failRate)}"
-
+ 
                     if (fails.size() > 0) {
                         echo "[WARN] FAIL ${fails.size()}건 발견됨"
-                        error "[ERR-QA-002] FAIL ${fails.size()}건 발견"
+                        currentBuild.result = 'FAILURE'
+                    } else {
+                        echo "[SUCCESS] 모든 테스트 통과"
+                        currentBuild.result = 'SUCCESS'
                     }
                 }
             }
         }
     }
-
+ 
     post {
         always {
             archiveArtifacts artifacts: 'Test Results/**', fingerprint: true
         }
-
+ 
         success {
-            slackSend(channel: "#새-채널", message: "✅ QA 성공\n총 ${stats["Total"]}개 테스트 중 모두 통과")
+            script {
+                echo "✅ QA 성공 - 모든 테스트가 통과했습니다."
+            }
         }
-
+ 
         failure {
-            slackSend(channel: "#새-채널", message: "❌ QA 실패\n총 ${stats["Total"]}개 테스트 중 ${stats["Fail"]}개 실패")
+            script {
+                echo "❌ QA 실패 - 테스트 결과를 확인하세요."
+            }
         }
     }
 }

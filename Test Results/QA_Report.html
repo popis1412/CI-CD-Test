@@ -1,0 +1,3570 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>7DS Origin QA QA Report</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            font-size: 1.8em;
+            color: #333;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-icon {
+            font-size: 1.5em;
+        }
+        
+        /* 통계 박스 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .stat-rate {
+            font-size: 1.1em;
+            opacity: 0.8;
+        }
+        
+        /* 테이블 스타일 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        th {
+            background: #f5f7fa;
+            color: #333;
+            padding: 15px;
+            text-align: center;
+            font-weight: 600;
+            border-bottom: 2px solid #667eea;
+            font-size: 0.95em;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            text-align: center;
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        tr:hover {
+            background: #f9fafb;
+        }
+        
+        .text-left {
+            text-align: left;
+        }
+        
+        /* 상태별 색상 */
+        .status-pass {
+            background: #e8f5e9;
+            color: #2e7d32;
+            font-weight: 600;
+        }
+        
+        .status-fail {
+            background: #ffebee;
+            color: #c62828;
+            font-weight: 600;
+        }
+        
+        .status-blocked {
+            background: #fff3e0;
+            color: #e65100;
+            font-weight: 600;
+        }
+        
+        .status-nottest {
+            background: #f5f5f5;
+            color: #616161;
+            font-weight: 600;
+        }
+        
+        .status-na {
+            background: #e3f2fd;
+            color: #1565c0;
+            font-weight: 600;
+        }
+        
+        /* 분류 서브섹션 */
+        .classification-section {
+            background: #f9fafb;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .classification-title {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .fail-detail {
+            background: #ffebee;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #c62828;
+        }
+        
+        .fail-detail-title {
+            font-weight: 600;
+            color: #c62828;
+            margin-bottom: 8px;
+        }
+        
+        .fail-detail-item {
+            font-size: 0.95em;
+            color: #333;
+            padding: 5px 0;
+        }
+        
+        .fail-detail-item strong {
+            color: #c62828;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 30px;
+            color: #999;
+            font-style: italic;
+        }
+        
+        .metric {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>7DS Origin QA</h1>
+            <p>QA Test Report</p>
+        </div>
+        
+        <div class="content">
+            <!-- 섹션 1: 전체 테스트 현황 -->
+            <div class="section">
+                <div class="section-title">
+                    <span class="section-icon">📊</span>
+                    전체 테스트 현황
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-box" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <div class="stat-label">Total</div>
+                        <div class="stat-value">107</div>
+                        <div class="stat-rate">100.00%</div>
+                    </div>
+                    <div class="stat-box" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);">
+                        <div class="stat-label">Pass</div>
+                        <div class="stat-value">0</div>
+                        <div class="stat-rate">0.00%</div>
+                    </div>
+                    <div class="stat-box" style="background: linear-gradient(135deg, #c62828 0%, #880e4f 100%);">
+                        <div class="stat-label">Fail</div>
+                        <div class="stat-value">0</div>
+                        <div class="stat-rate">0.00%</div>
+                    </div>
+                    <div class="stat-box" style="background: linear-gradient(135deg, #e65100 0%, #bf360c 100%);">
+                        <div class="stat-label">Blocked</div>
+                        <div class="stat-value">0</div>
+                        <div class="stat-rate">0.00%</div>
+                    </div>
+                    <div class="stat-box" style="background: linear-gradient(135deg, #616161 0%, #212121 100%);">
+                        <div class="stat-label">Not Test</div>
+                        <div class="stat-value">107</div>
+                        <div class="stat-rate">100.00%</div>
+                    </div>
+                    <div class="stat-box" style="background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);">
+                        <div class="stat-label">N/A</div>
+                        <div class="stat-value">0</div>
+                        <div class="stat-rate">0.00%</div>
+                    </div>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Count</th>
+                            <th>Progress</th>
+                            <th>Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="text-left"><strong>Total</strong></td>
+                            <td>107</td>
+                            <td><div style="width:100%; background:#667eea; height:20px; border-radius:10px;"></div></td>
+                            <td>100.00%</td>
+                        </tr>
+                        <tr>
+                            <td class="text-left"><strong>Pass</strong></td>
+                            <td>0</td>
+                            <td><div style="width:0%; background:#2e7d32; height:20px; border-radius:10px;"></div></td>
+                            <td>0.00%</td>
+                        </tr>
+                        <tr>
+                            <td class="text-left"><strong>Fail</strong></td>
+                            <td>0</td>
+                            <td><div style="width:0%; background:#c62828; height:20px; border-radius:10px;"></div></td>
+                            <td>0.00%</td>
+                        </tr>
+                        <tr>
+                            <td class="text-left"><strong>Blocked</strong></td>
+                            <td>0</td>
+                            <td><div style="width:0%; background:#e65100; height:20px; border-radius:10px;"></div></td>
+                            <td>0.00%</td>
+                        </tr>
+                        <tr>
+                            <td class="text-left"><strong>NotTest</strong></td>
+                            <td>107</td>
+                            <td><div style="width:100%; background:#616161; height:20px; border-radius:10px;"></div></td>
+                            <td>100.00%</td>
+                        </tr>
+                        <tr>
+                            <td class="text-left"><strong>N/A</strong></td>
+                            <td>0</td>
+                            <td><div style="width:0%; background:#1565c0; height:20px; border-radius:10px;"></div></td>
+                            <td>0.00%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 섹션 2: 대분류별 테스트 현황 -->
+            <div class="section">
+                <div class="section-title">
+                    <span class="section-icon">🏷️</span>
+                    대/중분류별 테스트 현황
+                </div>
+                
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 1</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 10</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 100</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">환경 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 11</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 12</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 13</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 14</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 15</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 16</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 17</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 18</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 19</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 시스템</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 2</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 20</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 시스템</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 21</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 시스템</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 22</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 시스템</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 23</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 시스템</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 24</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 연출</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 25</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 연출</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 26</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 연출</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 27</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 연출</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 28</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 연출</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 29</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 연출</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 3</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 30</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 31</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 32</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 33</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 34</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 35</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 36</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 37</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 38</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 39</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 4</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 40</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 41</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 42</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 43</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 44</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 45</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 46</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 47</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 48</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 49</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 5</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 50</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 51</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 52</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 53</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 54</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 55</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 56</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 57</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 58</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 59</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 6</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 60</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 61</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 62</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 63</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 64</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 65</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 66</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 67</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 68</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 69</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 7</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 70</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 71</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 72</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 73</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 74</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 75</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 76</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 77</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 78</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 79</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 8</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 80</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 81</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 82</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 83</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 84</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 85</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 86</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 87</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 88</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">환경 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 89</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">환경 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 9</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">전투 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 90</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">환경 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 91</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">환경 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 92</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">환경 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 93</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">환경 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 94</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">환경 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 95</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">환경 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 96</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">환경 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 97</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">환경 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 98</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">환경 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: 99</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">환경 UI</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: Blocked</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left"></td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: Fail</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left"></td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: N/A</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left"></td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: NO</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left">대분류</td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: NotTest</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left"></td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: Pass</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left"></td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+                <div class="classification-section">
+                    <div class="classification-title">대분류: Total</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">중분류</th>
+                                <th>Total</th>
+                                <th>Pass</th>
+                                <th>Fail</th>
+                                <th>Blocked</th>
+                                <th>NotTest</th>
+                                <th>N/A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        
+                            <tr>
+                                <td class="text-left"></td>
+                                <td><strong>1</strong></td>
+                                <td><span class="metric">0.0%</span></td>
+                                <td><span class="metric" style="background:#c62828;">0.0%</span></td>
+                                <td><span class="metric" style="background:#e65100;">0.0%</span></td>
+                                <td><span class="metric" style="background:#616161;">100.0%</span></td>
+                                <td><span class="metric" style="background:#1565c0;">0.0%</span></td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+                        
+            </div>
+            
+            <div class="section">
+                <div class="section-title">
+                    <span class="section-icon">❌</span>
+                    분류별 실패한 시나리오
+                </div>
+                <div class='no-data'>실패한 시나리오가 없습니다.</div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">
+                    <span class="section-icon">🔍</span>
+                    분류별 발견된 결함 상세 정보
+                </div>
+                <div class='no-data'>발견된 결함이 없습니다.</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+                    
