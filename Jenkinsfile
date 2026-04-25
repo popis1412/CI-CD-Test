@@ -47,31 +47,35 @@ pipeline {
         }
     }
 
-    post {
+post {
         success {
             script {
+                // 파이썬에서 추출된 실제 결함 개수
                 int fCount = env.ACTUAL_FAIL_COUNT.toInteger()
 
                 if (fCount > 0) {
-                    // 1. 텍스트 메시지 먼저 전송
+                    // 결함이 1개 이상인 경우
                     slackSend(
                         channel: "#${SLACK_CHANNEL}",
                         color: 'warning',
-                        message: "@here\n✅ **QA 빌드 완료 (결함 발견: ${fCount}건)**\n\n[고쳐야 되는 것들 목록 - 발견된 결함 상세 표]\n파이썬으로 생성된 상세 리포트를 아래에 첨부합니다."
+                        message: """@here
+✅ **QA 빌드 완료**
+발견된 결함이 **${fCount}개** 있습니다.
+`Test Results\\qa_report.html` 파일을 확인해 주세요."""
                     )
                     
-                    // 2. [중요] 파일 업로드 - 절대 경로를 사용하여 확실하게 전송
-                    // 만약 여기서도 안 올라간다면 슬랙 앱의 'files:write' 권한을 확인해야 합니다.
+                    // 파일 업로드 (슬랙 앱 권한이 허용되어 있어야 함)
                     slackUploadFile(
                         channel: "#${SLACK_CHANNEL}",
                         filePath: "${env.REPORT_FULL_PATH}",
-                        initialComment: "qa_report.html 상세 결과 파일"
+                        initialComment: "상세 결함 리포트(qa_report.html)입니다."
                     )
                 } else {
+                    // 결함이 0개인 경우
                     slackSend(
                         channel: "#${SLACK_CHANNEL}",
                         color: 'good',
-                        message: "@here\n✅ **QA 빌드 완료 (Clean)**\n\n발견된 결함이 없습니다. 🎉"
+                        message: "@here\n✅ **QA 빌드 완료**\n발견된 결함이 없습니다. 🎉"
                     )
                 }
             }
