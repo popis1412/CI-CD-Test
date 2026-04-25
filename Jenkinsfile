@@ -279,7 +279,7 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'Test Results/**'
+            archiveArtifacts artifacts: '**/Test Results/**'
         }
     }
 }
