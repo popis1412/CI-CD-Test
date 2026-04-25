@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'WORKSPACE_PATH', defaultValue: 'C:\\QA\\CI-CD-Test', description: 'Workspace Path')
+        string(name: 'WORKSPACE_PATH', defaultValue: '', description: 'C:\파일경로')
     }
 
     environment {
