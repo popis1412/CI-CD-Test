@@ -11,7 +11,7 @@ pipeline {
             steps {
                 script {
                     // BASE_PATH를 파라미터로 가져옵니다.
-                    def basePath = params.BASE_PATH
+                    def basePath = params.BASE_PATH\\
                     
                     // 미리 빌드된 jar 파일의 경로 (예: 프로젝트 루트 디렉토리에 위치한다고 가정)
                     def jarPath = "QAReportGenerator.jar"
