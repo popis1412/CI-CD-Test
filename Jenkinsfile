@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     parameters {
-        string(name: 'BASE_PATH', defaultValue: 'C:\\QA\\CI-CD-Test', description: '프로젝트 최상위 경로를 입력하세요.')
+        string(name: 'BASE_PATH', defaultValue: '', description: '프로젝트 최상위 경로를 입력하세요.')
     }
 
     stages {
@@ -20,7 +20,7 @@ pipeline {
                     set "WORKSPACE_DIR=%CD%"
                     
                     :: cmd 실행기를 유저 홈 디렉터리(%USERPROFILE%)로 이동시킵니다.
-                    cd /d "%USERPROFILE%"
+                    cd ~
                     
                     echo =========================================
                     echo 1. Python 설치 여부 확인 및 자동 설치
