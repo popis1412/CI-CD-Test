@@ -17,7 +17,7 @@ pipeline {
         PROJECT_NAME = "7DS Origin QA"
         WORKSPACE_PATH = "${params.WORKSPACE_PATH}"
         RESULT_DIR = "${params.WORKSPACE_PATH}\\Test Results"
-        TEST_FILE_PATH = "${params.WORKSPACE_PATH}\\QA_Test.csv"
+        TEST_FILE_PATH = "${params.WORKSPACE_PATH}\\Tests\QA_Test.csv"
     }
 
     stages {
