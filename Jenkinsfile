@@ -22,20 +22,32 @@ pipeline {
             }
         }
 
-        stage('QA Analysis (Multi CSV)') {
+        stage('QA Analysis (Multi CSV Safe)') {
             steps {
                 script {
 
-                    def files = findFiles(glob: "${TEST_DIR}\\*.csv")
+                    // =========================
+                    // CSV FILE LIST (NO PLUGIN)
+                    // =========================
+                    def files = []
 
-                    if (files.length == 0) {
-                        error "CSV 없음"
+                    def result = bat(
+                        script: "dir /b \"${TEST_DIR}\\\\*.csv\"",
+                        returnStdout: true
+                    ).trim()
+
+                    if (!result) {
+                        error "CSV 파일 없음"
+                    }
+
+                    result.split("\\r?\\n").each {
+                        if (it?.trim()) files << it.trim()
                     }
 
                     def allData = []
 
                     // =========================
-                    // CSV SAFE PARSER
+                    // SAFE CSV PARSER
                     // =========================
                     def parseCsvLine = { line ->
                         def result = []
@@ -45,24 +57,27 @@ pipeline {
                         for (int i = 0; i < line.length(); i++) {
                             char c = line.charAt(i)
 
-                            if (c == '"') inQuotes = !inQuotes
-                            else if (c == ',' && !inQuotes) {
+                            if (c == '"') {
+                                inQuotes = !inQuotes
+                            } else if (c == ',' && !inQuotes) {
                                 result << sb.toString().trim()
                                 sb.setLength(0)
                             } else {
                                 sb.append(c)
                             }
                         }
+
                         result << sb.toString().trim()
                         return result
                     }
 
                     // =========================
-                    // LOAD ALL CSV FILES
+                    // LOAD MULTI CSV
                     // =========================
-                    files.each { f ->
+                    files.each { fileName ->
 
-                        def content = readFile(f.path)
+                        def path = "${TEST_DIR}\\${fileName}"
+                        def content = readFile(path)
                         def lines = content.split("\\r?\\n")
 
                         for (int i = 1; i < lines.size(); i++) {
@@ -74,7 +89,7 @@ pipeline {
                             if (cols.size() <= 6) continue
 
                             allData << [
-                                file: f.name,              // "시트 이름"
+                                file: fileName,
                                 major: cols[0],
                                 minor: cols[1],
                                 scenario: cols[2],
@@ -85,10 +100,11 @@ pipeline {
                     }
 
                     // =========================
-                    // NORMALIZE
+                    // NORMALIZE RESULT
                     // =========================
                     def normalize = { r ->
                         if (!r) return "NOT TEST"
+
                         switch(r.trim().toUpperCase()) {
                             case "PASS": return "PASS"
                             case "FAIL": return "FAIL"
@@ -104,7 +120,7 @@ pipeline {
                     }
 
                     // =========================
-                    // TOTAL STATS
+                    // TOTAL STATS (%)
                     // =========================
                     def stats = [
                         Total: 0,
@@ -121,24 +137,15 @@ pipeline {
                     }
 
                     // =========================
-                    // FILE (SHEET) BASED TABLE
+                    // GROUP BY MAJOR / MINOR
                     // =========================
-                    def sheetMap = [:]
+                    def groupMap = [:]
 
                     allData.each { t ->
-                        def key = t.file
+                        def key = "${t.major}|${t.minor}"
 
-                        if (!sheetMap[key]) {
-                            sheetMap[key] = [
-                                file: key,
-                                rows: [:]
-                            ]
-                        }
-
-                        def groupKey = "${t.major}|${t.minor}"
-
-                        if (!sheetMap[key].rows[groupKey]) {
-                            sheetMap[key].rows[groupKey] = [
+                        if (!groupMap[key]) {
+                            groupMap[key] = [
                                 major: t.major,
                                 minor: t.minor,
                                 PASS: 0,
@@ -149,19 +156,23 @@ pipeline {
                             ]
                         }
 
-                        sheetMap[key].rows[groupKey][t.result]++
+                        groupMap[key][t.result]++
                     }
 
                     // =========================
-                    // FAIL BY TC (PER FILE)
+                    // FAIL SCENARIO RATIO
                     // =========================
-                    def failByTC = [:]
+                    def failByScenario = [:]
 
-                    allData.each {
-                        if (it.result == "FAIL") {
-                            def key = "${it.file}|${it.scenario}"
-                            failByTC[key] = (failByTC[key] ?: 0) + 1
-                        }
+                    allData.findAll { it.result == "FAIL" }.each {
+                        failByScenario[it.scenario] = (failByScenario[it.scenario] ?: 0) + 1
+                    }
+
+                    def failScenarioTable = failByScenario.collect { k, v ->
+                        [
+                            scenario: k,
+                            rate: stats.FAIL > 0 ? (v * 100.0 / stats.FAIL) : 0
+                        ]
                     }
 
                     // =========================
@@ -169,8 +180,10 @@ pipeline {
                     // =========================
                     def defects = allData.findAll { it.result == "FAIL" }
 
+                    def buildDate = new Date().format("yyyy-MM-dd HH:mm")
+
                     // =========================
-                    // HTML
+                    // HTML REPORT
                     // =========================
                     def html = """
                     <html>
@@ -180,83 +193,78 @@ pipeline {
                             body { font-family: Arial; padding:20px; }
                             table { border-collapse: collapse; width:100%; margin-bottom:30px; }
                             th, td { border:1px solid #ddd; padding:6px; text-align:center; }
-                            th { background:#333; color:white; }
+                            th { background:#222; color:white; }
                         </style>
                     </head>
                     <body>
 
-                    <h2>QA SUMMARY</h2>
+                    <h2>QA REPORT</h2>
 
-                    <p><b>테스트 파일</b>: ${files.collect { it.name }.join(', ')}</p>
-                    <p><b>빌드 날짜</b>: ${new Date().format("yyyy-MM-dd HH:mm")}</p>
+                    <p><b>테스트 파일</b>: ${files.join(', ')}</p>
+                    <p><b>빌드 날짜</b>: ${buildDate}</p>
 
                     <h3>전체 테스트 결과</h3>
                     <table>
-                        <tr>
-                            <th>Type</th><th>Count</th><th>Progress</th>
-                        </tr>
+                        <tr><th>Type</th><th>Count</th><th>Rate</th></tr>
                     """
 
                     stats.each { k, v ->
-                        def pct = stats.Total > 0 ? (v * 100.0 / stats.Total) : 0
-                        html += "<tr><td>${k}</td><td>${v}</td><td>${String.format('%.2f', pct)}%</td></tr>"
+                        def rate = stats.Total > 0 ? (v * 100.0 / stats.Total) : 0
+                        html += "<tr><td>${k}</td><td>${v}</td><td>${String.format('%.2f', rate)}%</td></tr>"
                     }
 
                     html += "</table>"
 
                     // =========================
-                    // FILE BASED TABLE (REQUESTED FORMAT)
+                    // GROUP TABLE (REQUEST FORMAT)
                     // =========================
-                    sheetMap.each { fileName, data ->
+                    html += "<h3>대/중분류 테스트 현황</h3>"
+                    html += """
+                    <table>
+                        <tr>
+                            <th>대분류</th>
+                            <th>중분류</th>
+                            <th>Pass</th>
+                            <th>Fail</th>
+                            <th>Blocked</th>
+                            <th>Not Test</th>
+                            <th>N/A</th>
+                        </tr>
+                    """
 
-                        html += "<h3>📄 ${fileName}</h3>"
+                    groupMap.values().each { g ->
                         html += """
-                        <table>
-                            <tr>
-                                <th>대분류</th>
-                                <th>중분류</th>
-                                <th>Pass</th>
-                                <th>Fail</th>
-                                <th>Blocked</th>
-                                <th>Not Test</th>
-                                <th>N/A</th>
-                            </tr>
+                        <tr>
+                            <td>${g.major}</td>
+                            <td>${g.minor}</td>
+                            <td>${g.PASS}</td>
+                            <td>${g.FAIL}</td>
+                            <td>${g.BLOCKED}</td>
+                            <td>${g['NOT TEST']}</td>
+                            <td>${g['N/A']}</td>
+                        </tr>
                         """
-
-                        data.rows.each { k, v ->
-                            html += """
-                            <tr>
-                                <td>${v.major}</td>
-                                <td>${v.minor}</td>
-                                <td>${v.PASS}</td>
-                                <td>${v.FAIL}</td>
-                                <td>${v.BLOCKED}</td>
-                                <td>${v['NOT TEST']}</td>
-                                <td>${v['N/A']}</td>
-                            </tr>
-                            """
-                        }
-
-                        html += "</table>"
-                    }
-
-                    // =========================
-                    // FAIL TC TABLE
-                    // =========================
-                    html += "<h3>TC Fail Ratio</h3><table><tr><th>Sheet</th><th>TC</th><th>Fail Count</th></tr>"
-
-                    failByTC.each { k, v ->
-                        def parts = k.split("\\|")
-                        html += "<tr><td>${parts[0]}</td><td>${parts[1]}</td><td>${v}</td></tr>"
                     }
 
                     html += "</table>"
 
                     // =========================
-                    // DEFECT LIST
+                    // FAIL SCENARIO TABLE
+                    // =========================
+                    html += "<h3>TC Fail 비율</h3>"
+                    html += "<table><tr><th>TC</th><th>Fail Rate</th></tr>"
+
+                    failScenarioTable.each {
+                        html += "<tr><td>${it.scenario}</td><td>${String.format('%.1f', it.rate)}%</td></tr>"
+                    }
+
+                    html += "</table>"
+
+                    // =========================
+                    // DEFECT TABLE
                     // =========================
                     html += "<h3>Defects</h3>"
-                    html += "<table><tr><th>Sheet</th><th>대분류</th><th>중분류</th><th>Action</th></tr>"
+                    html += "<table><tr><th>시트</th><th>대분류</th><th>중분류</th><th>Action</th></tr>"
 
                     defects.each {
                         html += "<tr><td>${it.file}</td><td>${it.major}</td><td>${it.minor}</td><td>${it.action}</td></tr>"
@@ -266,6 +274,20 @@ pipeline {
 
                     writeFile file: "${RESULT_DIR}\\qa_report.html", text: html
 
+                    // =========================
+                    // SLACK MESSAGE (SUCCESS ONLY)
+                    // =========================
+                    def slackMsg = """
+QA 완료
+
+Total: ${stats.Total}
+Fail: ${stats.FAIL}
+
+Report 생성 완료
+"""
+
+                    env.SLACK_MSG = slackMsg
+
                     echo "[INFO] TOTAL=${stats.Total}"
                     echo "[INFO] FAIL=${stats.FAIL}"
                 }
@@ -274,19 +296,11 @@ pipeline {
     }
 
     post {
-        success {
-            slackSend channel: '#새-채널',
-                color: 'good',
-                message: "✅ QA 완료"
-        }
-
-        failure {
-            slackSend channel: '#새-채널',
-                color: 'danger',
-                message: "❌ QA 실패"
-        }
-
         always {
+            slackSend channel: '#새-채널',
+                color: (env.SLACK_MSG?.contains("Fail: 0") ? "good" : "danger"),
+                message: env.SLACK_MSG
+
             archiveArtifacts artifacts: 'Test Results/**'
         }
     }
