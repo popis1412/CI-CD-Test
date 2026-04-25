@@ -74,26 +74,35 @@ pipeline {
         // 3. EXCEL ANALYSIS (JAVA)
         // =========================
         stage('QA Analysis (Excel)') {
-            steps {
-                script {
+    steps {
+        script {
 
-                    if (!fileExists(TEST_FILE)) {
-                        error "Excel 파일 없음"
-                    }
-
-                    def cmd = """
-                    java -cp "${LIBS_DIR}/*" ExcelReader "${TEST_FILE}" "${REPORT_FILE}"
-                    """
-
-                    def output = bat(returnStdout: true, script: cmd).trim()
-
-                    echo "========================="
-                    echo output
-                    echo "========================="
-                }
+            if (!fileExists(TEST_FILE)) {
+                error "Excel 파일 없음"
             }
+
+            // =========================
+            // 1. JAVA 컴파일 (핵심 추가)
+            // =========================
+            bat """
+            javac -cp "${LIBS_DIR}/*" ${WORKSPACE_PATH}\\ExcelReader.java
+            """
+
+            // =========================
+            // 2. 실행
+            // =========================
+            def cmd = """
+            java -cp "${LIBS_DIR}/*;${WORKSPACE_PATH}" ExcelReader "${TEST_FILE}" "${REPORT_FILE}"
+            """
+
+            def output = bat(returnStdout: true, script: cmd).trim()
+
+            echo "========================="
+            echo output
+            echo "========================="
         }
     }
+}
 
     post {
         always {
