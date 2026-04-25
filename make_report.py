@@ -168,3 +168,11 @@ with open(output_html, 'w', encoding='utf-8') as f:
     f.write(html_content)
 
 print(f"자동 시트 탐색 리포트 생성 완료: {output_html}")
+
+with open(output_html, 'w', encoding='utf-8') as f:
+    f.write(html_content)
+
+print(f"자동 시트 탐색 리포트 생성 완료: {output_html}")
+
+# [추가] 젠킨스에서 인식하기 쉽게 결함 개수를 표준 출력으로 내보냅니다.
+print(f"[FAIL_COUNT] {overall_stats['Fail']}")
