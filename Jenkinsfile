@@ -18,10 +18,11 @@ pipeline {
                     def RESULT_DIR = "${params.BASE_PATH}\\Test Results"
 
                     bat """
-                    if not exist "${RESULT_DIR}" (
-                        mkdir "${RESULT_DIR}"
-                    )
-                    """
+if exist "Test Results" (
+    rmdir /s /q "Test Results"
+)
+mkdir "Test Results"
+"""
                 }
             }
         }
