@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     parameters {
-        string(name: 'BASE_PATH', defaultValue: 'C:\\QA\\CI-CD-Test', description: '프로젝트 최상위 경로를 입력하세요.')
+        string(name: 'BASE_PATH', defaultValue: '', description: '프로젝트 최상위 경로를 입력하세요.')
     }
 
     environment {
