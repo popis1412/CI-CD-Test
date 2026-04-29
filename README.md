@@ -106,15 +106,12 @@ QA 서버에 구성된 Steam Mock 결제 기능을 통해, 실제 사용자 행�
 
 ### ③ Python
 1. Python 3.12 설치 (PATH 설정)  
-2. 라이브러리 설치  
-pip install openpyxl
+2. 라이브러리 설치  `pip install openpyxl`
 
 🚀 실행 방법 (결제 시나리오 테스트)
 
 1. 프로젝트가 저장된 경로로 이동  
-2. 아래 명령어를 통해 서버 실행  
-python check_process.py
-
+2. 명령어를 통해 서버 실행  `python check_process.py`
 3. 서버 실행 후 표시되는 주소로 접속  
 4. Steam Mock 결제 페이지에서 결제 버튼 클릭  
 5. 결제 완료 시, 아래 경로에 결과 파일 생성  
