@@ -5,15 +5,15 @@ import sys
 # =========================
 # 사용자 설정
 # =========================
-header_row = 9  # 헤더(컬럼명)가 있는 행 번호
+header_row = 9  # 헤더(컬럼명) 행 번호
 
 # =========================
-# 문자열 정규화 함수
+# 문자열 정규화
 # =========================
 def normalize(text):
     return str(text).replace(" ", "").strip() if text else ""
 
-# 1. 실행 인자(Argument)로 BASE_PATH 전달받기
+# 실행 인자
 if len(sys.argv) < 2:
     print("사용법: python make_report.py [BASE_PATH_경로]")
     sys.exit(1)
@@ -26,21 +26,16 @@ output_html = os.path.join(output_dir, 'qa_report.html')
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
-# 2. 엑셀 파일 로드
-try:
-    wb = openpyxl.load_workbook(excel_path, data_only=True)
-except Exception as e:
-    print(f"엑셀 파일 읽기 오류: {e}")
-    sys.exit(1)
+# 엑셀 로드
+wb = openpyxl.load_workbook(excel_path, data_only=True)
 
 # TC_ 시트 자동 탐색
-target_sheets = [sheet for sheet in wb.sheetnames if sheet.startswith('TC_')]
-
+target_sheets = [s for s in wb.sheetnames if s.startswith('TC_')]
 if not target_sheets:
-    print("[오류] 'TC_'로 시작하는 테스트 케이스 시트를 찾을 수 없습니다.")
+    print("[오류] TC_ 시트 없음")
     sys.exit(1)
 
-# --- 통계 구조 ---
+# 통계 구조
 status_keys = ["Pass", "Fail", "Not Test", "Blocked"]
 overall_stats = {k: 0 for k in status_keys}
 overall_stats["Total"] = 0
@@ -50,7 +45,7 @@ category_stats = {}
 defect_list = []
 
 # =========================
-# 시트 순회
+# 시트 처리
 # =========================
 for sheet_name in target_sheets:
     ws = wb[sheet_name]
@@ -58,53 +53,40 @@ for sheet_name in target_sheets:
     sheet_stats[sheet_name] = {k: 0 for k in status_keys}
     sheet_stats[sheet_name]["Total"] = 0
 
-    # -------------------------
-    # 1. 헤더 기반 컬럼 찾기 (정규화 적용)
-    # -------------------------
+    # 헤더 탐색
     header_map = {}
-
     for col in range(1, ws.max_column + 1):
-        value = ws.cell(row=header_row, column=col).value
-        if value:
-            key = normalize(value)
-            header_map[key] = col
+        val = ws.cell(row=header_row, column=col).value
+        if val:
+            header_map[normalize(val)] = col
 
-    # 필수 컬럼 확인
     result_col = header_map.get("수행결과")
-    if result_col is None:
-        print(f"[경고] {sheet_name} 시트에서 '수행 결과' 컬럼을 찾을 수 없습니다.")
-        continue
-
-    # 선택 컬럼 (없어도 동작)
     cat1_col = header_map.get("대분류")
     cat2_col = header_map.get("중분류")
     action_col = header_map.get("테스트액션")
 
-    # -------------------------
-    # 2. 데이터 행 순회
-    # -------------------------
+    if not result_col:
+        print(f"[경고] {sheet_name}: 수행결과 컬럼 없음")
+        continue
+
+    # 데이터 처리
     for row in range(header_row + 1, ws.max_row + 1):
-        status = ws.cell(row=row, column=result_col).value
-        status = normalize(status)
+        status = normalize(ws.cell(row=row, column=result_col).value)
 
         if status in status_keys:
             cat1 = normalize(ws.cell(row=row, column=cat1_col).value) if cat1_col else "미분류"
             cat2 = normalize(ws.cell(row=row, column=cat2_col).value) if cat2_col else "미분류"
             action = normalize(ws.cell(row=row, column=action_col).value) if action_col else "액션 없음"
 
-            # 전체 통계
             overall_stats["Total"] += 1
             overall_stats[status] += 1
 
-            # 시트별 통계
             sheet_stats[sheet_name]["Total"] += 1
             sheet_stats[sheet_name][status] += 1
 
-            # 카테고리 통계
-            cat_key = (cat1, cat2, status)
-            category_stats[cat_key] = category_stats.get(cat_key, 0) + 1
+            key = (cat1, cat2, status)
+            category_stats[key] = category_stats.get(key, 0) + 1
 
-            # 결함 리스트
             if status == "Fail":
                 defect_list.append({
                     "Sheet": sheet_name,
@@ -114,36 +96,76 @@ for sheet_name in target_sheets:
                     "Action": action
                 })
 
-def get_pct(count, total):
-    return f"{(count / total * 100):.1f}%" if total > 0 else "0.0%"
+def get_pct(c, t):
+    return f"{(c/t*100):.1f}%" if t else "0.0%"
 
 # =========================
-# HTML 리포트 생성
+# HTML 리포트 (원래 섹션 유지)
 # =========================
 html_content = '''<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>QA 리포트</title>
+<title>QA 정량 분석 리포트</title>
+<style>
+body { font-family: sans-serif; margin: 40px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+.pass { color: green; }
+.fail { color: red; }
+.not-test { color: orange; }
+.blocked { color: purple; }
+</style>
 </head>
 <body>
-<h1>QA 테스트 결과 요약</h1>
+<h1>QA 테스트 결과 리포트</h1>
 '''
 
-html_content += f"""
-<p>Total: {overall_stats['Total']}</p>
-<p>Pass: {overall_stats['Pass']}</p>
-<p>Fail: {overall_stats['Fail']}</p>
-<p>Not Test: {overall_stats['Not Test']}</p>
-<p>Blocked: {overall_stats['Blocked']}</p>
-"""
+# 섹션 0
+html_content += f'''
+<h2>0. 전체 요약</h2>
+<table>
+<tr><th>항목</th><th>수치</th><th>비율</th></tr>
+<tr><td>Total</td><td>{overall_stats['Total']}</td><td>100%</td></tr>
+<tr><td class="pass">Pass</td><td>{overall_stats['Pass']}</td><td>{get_pct(overall_stats['Pass'], overall_stats['Total'])}</td></tr>
+<tr><td class="fail">Fail</td><td>{overall_stats['Fail']}</td><td>{get_pct(overall_stats['Fail'], overall_stats['Total'])}</td></tr>
+<tr><td class="not-test">Not Test</td><td>{overall_stats['Not Test']}</td><td>{get_pct(overall_stats['Not Test'], overall_stats['Total'])}</td></tr>
+<tr><td class="blocked">Blocked</td><td>{overall_stats['Blocked']}</td><td>{get_pct(overall_stats['Blocked'], overall_stats['Total'])}</td></tr>
+</table>
+'''
+
+# 섹션 1
+html_content += '''
+<h2>1. 분류별 현황</h2>
+<table>
+<tr><th>대분류</th><th>중분류</th><th>상태</th><th>개수</th></tr>
+'''
+for (c1, c2, st), cnt in category_stats.items():
+    html_content += f"<tr><td>{c1}</td><td>{c2}</td><td>{st}</td><td>{cnt}</td></tr>"
+html_content += "</table>"
+
+# 섹션 2
+html_content += '<h2>2. 시트별 실패율</h2>'
+for s in target_sheets:
+    total = sheet_stats[s]["Total"]
+    fail = sheet_stats[s]["Fail"]
+    html_content += f"<p>{s}: {get_pct(fail, total)}</p>"
+
+# 섹션 3
+html_content += '<h2>3. 결함 리스트</h2>'
+if not defect_list:
+    html_content += "<p>결함 없음</p>"
+else:
+    html_content += "<table><tr><th>No</th><th>Sheet</th><th>행</th><th>내용</th></tr>"
+    for i, d in enumerate(defect_list, 1):
+        html_content += f"<tr><td>{i}</td><td>{d['Sheet']}</td><td>{d['Row']}</td><td>{d['Action']}</td></tr>"
+    html_content += "</table>"
 
 html_content += "</body></html>"
 
-with open(output_html, 'w', encoding='utf-8') as f:
+# 저장
+with open(output_html, "w", encoding="utf-8") as f:
     f.write(html_content)
 
 print(f"리포트 생성 완료: {output_html}")
-
-# Jenkins용 출력
 print(f"[FAIL_COUNT] {overall_stats['Fail']}")
